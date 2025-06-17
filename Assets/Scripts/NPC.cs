@@ -2,13 +2,13 @@ using UnityEngine;
 
 public class NPC : MonoBehaviour
 {
-    public string name;
-    public string personality;
+    [SerializeField] private string name;
+    [SerializeField] private string personality;
 
     [Header("Reaction Sprites")]
-    public Sprite angrySprite;
-    public Sprite concernedSprite;
-    public Sprite happySprite;
-    public Sprite neutralSprite;
-    public Sprite smileSprite;
+    [SerializeField] private Sprite angrySprite;
+    [SerializeField] private Sprite concernedSprite;
+    [SerializeField] private Sprite happySprite;
+    [SerializeField] private Sprite neutralSprite;
+    [SerializeField] private Sprite smileSprite;
 }

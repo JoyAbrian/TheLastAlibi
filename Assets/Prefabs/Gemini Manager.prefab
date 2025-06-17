@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 6790926721026085120}
   - component: {fileID: 6015506993103287062}
   m_Layer: 0
-  m_Name: GeminiManager
+  m_Name: Gemini Manager
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
