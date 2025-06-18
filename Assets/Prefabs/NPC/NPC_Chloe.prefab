@@ -45,7 +45,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a43f0423788e7064f860afb8318197f3, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  name: Chloe
+  NPCName: Chloe
   personality: Intelligent, observant, a bit reserved, thoughtful, and creative
   angrySprite: {fileID: 21300000, guid: 7eb291a3a61106c42997663076e378ad, type: 3}
   concernedSprite: {fileID: 21300000, guid: 394b9c93d3224434cb0fcd3fed61b49e, type: 3}

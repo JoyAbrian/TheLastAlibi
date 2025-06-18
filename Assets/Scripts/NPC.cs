@@ -2,7 +2,7 @@ using UnityEngine;
 
 public class NPC : MonoBehaviour
 {
-    [SerializeField] private string name;
+    [SerializeField] private string NPCName;
     [SerializeField] private string personality;
 
     [Header("Reaction Sprites")]
