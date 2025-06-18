@@ -535,8 +535,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 1173, y: -716.8}
-  m_SizeDelta: {x: 741.15, y: 63.371}
+  m_AnchoredPosition: {x: 1180.5513, y: -743}
+  m_SizeDelta: {x: 755.627, y: 63.371}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &199976962
 MonoBehaviour:
@@ -669,8 +669,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 1173, y: -656.1}
-  m_SizeDelta: {x: 741.15, y: 59.282}
+  m_AnchoredPosition: {x: 1180.5513, y: -678}
+  m_SizeDelta: {x: 755.627, y: 59.282}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &321576054
 MonoBehaviour:
@@ -800,6 +800,7 @@ RectTransform:
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 101002159}
+  - {fileID: 1394698485}
   - {fileID: 1212470727}
   - {fileID: 1337413779}
   - {fileID: 525111316}
@@ -1473,8 +1474,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 1173, y: -532.8643}
-  m_SizeDelta: {x: 741.15, y: 65.893}
+  m_AnchoredPosition: {x: 1180.5513, y: -538}
+  m_SizeDelta: {x: 755.627, y: 65.893}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &525111317
 MonoBehaviour:
@@ -1607,8 +1608,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 1171.1462, y: -839.59985}
-  m_SizeDelta: {x: 769.442, y: 63.193}
+  m_AnchoredPosition: {x: 1178.6611, y: -868}
+  m_SizeDelta: {x: 784.472, y: 63.193}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &624794635
 MonoBehaviour:
@@ -1630,7 +1631,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: Are you sharp enough to find the truth?
+  m_text: "Will you uncover the truth \u2014 or be deceived?"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: a8fdc2ca5926cde438a2f25510ec31ca, type: 2}
   m_sharedMaterial: {fileID: 8442528118990973065, guid: a8fdc2ca5926cde438a2f25510ec31ca, type: 2}
@@ -1741,8 +1742,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 1173, y: -596}
-  m_SizeDelta: {x: 741.15, y: 62.393}
+  m_AnchoredPosition: {x: 1180.5513, y: -610}
+  m_SizeDelta: {x: 755.627, y: 62.393}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &629593054
 MonoBehaviour:
@@ -2218,8 +2219,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 1171.1462, y: -353.99994}
-  m_SizeDelta: {x: 769.442, y: 100.53}
+  m_AnchoredPosition: {x: 1178.6611, y: -353.99994}
+  m_SizeDelta: {x: 784.472, y: 100.53}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1212470728
 MonoBehaviour:
@@ -2486,8 +2487,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 1173, y: -777.8}
-  m_SizeDelta: {x: 741.15, y: 59.239}
+  m_AnchoredPosition: {x: 1180.5513, y: -807}
+  m_SizeDelta: {x: 755.627, y: 59.239}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1297020874
 MonoBehaviour:
@@ -2509,7 +2510,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: "\u2022 Once you\u2019re confident, make your accusation."
+  m_text: "\u2022 When you\u2019re ready, make your final accusation."
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: a8fdc2ca5926cde438a2f25510ec31ca, type: 2}
   m_sharedMaterial: {fileID: 8442528118990973065, guid: a8fdc2ca5926cde438a2f25510ec31ca, type: 2}
@@ -2620,8 +2621,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 0, y: 1}
-  m_AnchoredPosition: {x: 1173, y: -451}
-  m_SizeDelta: {x: 741.15, y: 96.101}
+  m_AnchoredPosition: {x: 1180.5513, y: -451}
+  m_SizeDelta: {x: 755.627, y: 96.101}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!114 &1337413780
 MonoBehaviour:
@@ -2719,6 +2720,81 @@ CanvasRenderer:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1337413778}
+  m_CullTransparentMesh: 1
+--- !u!1 &1394698484
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1394698485}
+  - component: {fileID: 1394698487}
+  - component: {fileID: 1394698486}
+  m_Layer: 5
+  m_Name: Panel
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!224 &1394698485
+RectTransform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1394698484}
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 327264519}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_AnchorMin: {x: 0.5, y: 0.5}
+  m_AnchorMax: {x: 0.5, y: 0.5}
+  m_AnchoredPosition: {x: 346, y: 243.48102}
+  m_SizeDelta: {x: 727.16, y: 5.071045}
+  m_Pivot: {x: 0.5, y: 0.5}
+--- !u!114 &1394698486
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1394698484}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  m_Material: {fileID: 0}
+  m_Color: {r: 0, g: 0, b: 0, a: 1}
+  m_RaycastTarget: 1
+  m_RaycastPadding: {x: 0, y: 0, z: 0, w: 0}
+  m_Maskable: 1
+  m_OnCullStateChanged:
+    m_PersistentCalls:
+      m_Calls: []
+  m_Sprite: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
+  m_Type: 1
+  m_PreserveAspect: 0
+  m_FillCenter: 1
+  m_FillMethod: 4
+  m_FillAmount: 1
+  m_FillClockwise: 1
+  m_FillOrigin: 0
+  m_UseSpriteMesh: 0
+  m_PixelsPerUnitMultiplier: 1
+--- !u!222 &1394698487
+CanvasRenderer:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1394698484}
   m_CullTransparentMesh: 1
 --- !u!1 &1478708299
 GameObject:
