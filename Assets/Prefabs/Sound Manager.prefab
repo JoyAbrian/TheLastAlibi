@@ -148,3 +148,9 @@ MonoBehaviour:
   - name: ButtonClick
     sounds:
     - {fileID: 8300000, guid: 2c983cd060364ec499b29d3defae2a35, type: 3}
+  - name: BookOpen
+    sounds:
+    - {fileID: 8300000, guid: fd14cfdbc5b74d345af1e433a007a05c, type: 3}
+  - name: BookClose
+    sounds:
+    - {fileID: 8300000, guid: bd479989bbb398942a91fdeb8808c515, type: 3}

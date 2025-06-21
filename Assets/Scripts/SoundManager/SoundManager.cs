@@ -7,7 +7,9 @@ using System;
 public enum SoundType
 {
     ButtonHover,
-    ButtonClick
+    ButtonClick,
+    BookOpen,
+    BookClose,
 }
 
 [RequireComponent(typeof(AudioSource)), ExecuteInEditMode]

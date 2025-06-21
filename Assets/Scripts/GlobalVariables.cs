@@ -19,6 +19,11 @@ public class GlobalVariables : MonoBehaviour
     public static List<string> INTERROGATION_LOG = new List<string>();
     public static List<string> FOUND_EVIDENCE = new List<string>();
 
+    // Game Settings
+    public static float MASTER_VOLUME = 1f;
+    public static float MUSIC_VOLUME = 0.8f;
+    public static float SOUND_EFFECTS_VOLUME = 0.5f;
+
     public static void ResetGameVariables()
     {
         GAME_DIFFICULTY = "Normal";
@@ -33,5 +38,9 @@ public class GlobalVariables : MonoBehaviour
 
         INTERROGATION_LOG.Clear();
         FOUND_EVIDENCE.Clear();
+
+        MASTER_VOLUME = 1f;
+        MUSIC_VOLUME = 0.8f;
+        SOUND_EFFECTS_VOLUME = 0.5f;
     }
 }
