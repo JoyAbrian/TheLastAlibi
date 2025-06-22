@@ -1,9 +1,12 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class PlayGame : MonoBehaviour
 {
     [SerializeField] private GameObject mainMenuPanel;
     [SerializeField] private GameObject playGamePanel;
+
+    public FadeManager fadeManager;
 
     public void OnPlayButtonClick()
     {
@@ -19,7 +22,7 @@ public class PlayGame : MonoBehaviour
 
     public void OnDifficultyButtonClick(string difficulty)
     {
-        // Start Game
-        Debug.Log($"Starting game with difficulty: {difficulty}");
+        GlobalVariables.GAME_DIFFICULTY = difficulty;
+        fadeManager.FadeToScene("LoadingScene");
     }
 }

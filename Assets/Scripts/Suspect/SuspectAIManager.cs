@@ -8,6 +8,8 @@ using UnityEngine.Networking;
 
 public class SuspectAIManager : MonoBehaviour
 {
+    public static SuspectProfile GeneratedProfile; // <== static for cross-scene access
+
     [Header("Gemini API Key JSON")]
     public TextAsset apiKeyFile;
 
@@ -17,10 +19,7 @@ public class SuspectAIManager : MonoBehaviour
     private string apiKey;
 
     [Serializable]
-    private class APIKeyWrapper
-    {
-        public string key;
-    }
+    private class APIKeyWrapper { public string key; }
 
     private void Awake()
     {
@@ -40,9 +39,7 @@ public class SuspectAIManager : MonoBehaviour
         }
     }
 
-    // =========================
-    // 1. Generate Suspect Profile
-    // =========================
+    // ======== PROFILE GENERATION ========
     public void GenerateSuspectProfile(Action<SuspectProfile> onGenerated)
     {
         StartCoroutine(GenerateSuspectRoutine(onGenerated));
@@ -54,15 +51,15 @@ public class SuspectAIManager : MonoBehaviour
             Generate a fictional murder suspect with:
             - name: {GlobalVariables.CURRENT_SUSPECT_NAME}
             - personality: {GlobalVariables.CURRENT_SUSPECT_PERSONALITY}
-            - a 2-4 paragraph backstory
-            - 1 to 3 clues hidden in the story depending on difficulty
+            - a 2–4 paragraph backstory
+            - 1–3 clues hidden in the story depending on difficulty
 
             Return JSON like:
             {{
               ""name"": ""<name>"",
               ""personality"": ""<personality>"",
               ""backstory"": [""..."", ""..."", ""...""],
-              ""evidence"": [""..."", ""...""]
+              ""evidence"": [""..."", ""..."", ""...""]
             }}
 
             Difficulty: {GlobalVariables.GAME_DIFFICULTY}
@@ -72,13 +69,12 @@ public class SuspectAIManager : MonoBehaviour
         {
             SuspectProfile profile = JsonUtility.FromJson<SuspectProfile>(json);
             currentProfile = profile;
+            GeneratedProfile = profile;
             onGenerated?.Invoke(profile);
         });
     }
 
-    // =========================
-    // 2. Interrogation Dialogue
-    // =========================
+    // ======== INTERROGATION ========
     public void SendPlayerQuestion(string playerQuestion, Action<SuspectInterrogationEntry> onResponse)
     {
         StartCoroutine(SendInterrogationRoutine(playerQuestion, onResponse));
@@ -134,9 +130,7 @@ public class SuspectAIManager : MonoBehaviour
         });
     }
 
-    // =========================
-    // Gemini Communication
-    // =========================
+    // ======== GEMINI COMMUNICATION ========
     private IEnumerator SendPromptToGemini(string prompt, Action<string> onJsonExtracted)
     {
         var body = new
@@ -197,8 +191,6 @@ public class SuspectAIManager : MonoBehaviour
 
         string json = responseText.Substring(start, end - start);
         json = Regex.Unescape(json);
-        json = json.Trim().Trim('`');
-
-        return json;
+        return json.Trim().Trim('`');
     }
 }

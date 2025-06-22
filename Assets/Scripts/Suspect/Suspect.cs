@@ -2,13 +2,13 @@ using UnityEngine;
 
 public class Suspect : MonoBehaviour
 {
-    [SerializeField] private string NPCName;
-    [SerializeField] private string personality;
+    public string NPCName;
+    public string personality;
 
     [Header("Reaction Sprites")]
-    [SerializeField] private Sprite angrySprite;
-    [SerializeField] private Sprite concernedSprite;
-    [SerializeField] private Sprite happySprite;
-    [SerializeField] private Sprite neutralSprite;
-    [SerializeField] private Sprite smileSprite;
+    public Sprite angrySprite;
+    public Sprite concernedSprite;
+    public Sprite happySprite;
+    public Sprite neutralSprite;
+    public Sprite smileSprite;
 }
