@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class NPC : MonoBehaviour
+public class Suspect : MonoBehaviour
 {
     [SerializeField] private string NPCName;
     [SerializeField] private string personality;

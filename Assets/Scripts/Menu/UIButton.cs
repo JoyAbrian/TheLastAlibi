@@ -17,7 +17,7 @@ public class UIButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     public void OnPointerEnter(PointerEventData eventData)
     {
         image.sprite = btnHover;
-        SoundManager.PlaySound(SoundType.ButtonHover, volume: 1f);
+        SoundManager.PlaySound(SoundType.ButtonHover, volume: GlobalVariables.SOUND_EFFECTS_VOLUME);
     }
 
     public void OnPointerExit(PointerEventData eventData)
@@ -27,6 +27,6 @@ public class UIButton : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
 
     public void PlayClickSound()
     {
-        SoundManager.PlaySound(SoundType.ButtonClick, volume: 1f);
+        SoundManager.PlaySound(SoundType.ButtonClick, volume: GlobalVariables.SOUND_EFFECTS_VOLUME);
     }
 }

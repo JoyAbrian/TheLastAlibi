@@ -13,6 +13,7 @@ public class GlobalVariables : MonoBehaviour
     // Game state
     public static int CURRENT_SUSPECT_INDEX = 0;
     public static string CURRENT_SUSPECT_NAME = "";
+    public static string CURRENT_SUSPECT_PERSONALITY = "";
     public static string CURRENT_SUSPECT_MOOD = "Neutral";
 
     // Game Log
