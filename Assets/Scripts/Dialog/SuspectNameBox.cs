@@ -7,6 +7,6 @@ public class SuspectNameBox : MonoBehaviour
 
     private void Start()
     {
-        suspectNameText.text = GlobalVariables.CURRENT_SUSPECT_NAME;
+        suspectNameText.text = SuspectManager.SuspectSingleton.NPCName;
     }
 }

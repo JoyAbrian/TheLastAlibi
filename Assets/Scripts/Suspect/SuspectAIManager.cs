@@ -57,10 +57,10 @@ public class SuspectAIManager : MonoBehaviour
                 name|personality|backstory paragraph 1\\nparagraph 2\\n...|clue 1\\nclue 2\\nclue 3
             <END>
 
-            Don't return markdown or explanation. Just raw delimited string.
+            Don't return markdown or explanation. Never add second name, just use the first name. Just raw delimited string.
         ";
 
-        int maxAttempts = 3;
+        int maxAttempts = 10;
         for (int attempt = 0; attempt < maxAttempts; attempt++)
         {
             bool success = false;
@@ -132,58 +132,110 @@ public class SuspectAIManager : MonoBehaviour
 
     private IEnumerator SendInterrogationRoutine(string playerQuestion, Action<SuspectInterrogationEntry> onComplete)
     {
-        string prompt = $@"
-            You are a suspect named {GlobalVariables.CURRENT_SUSPECT_NAME} with a {GlobalVariables.CURRENT_SUSPECT_PERSONALITY} personality.
+        int maxAttempts = 3;
+        int attempt = 0;
+        bool success = false;
 
-            Answer in character as a murder suspect. Be natural and react based on your backstory and clues.
-
-            Difficulty: {GlobalVariables.GAME_DIFFICULTY}
-            - Easy: You might reveal clues even accidentally.
-            - Normal: You might slip under pressure.
-            - Hard: Avoid giving clues unless heavily pressed.
-
-            Conversation so far:
-            {history}
-            Player: {playerQuestion}
-
-            Return delimited text like:
-            response|expression|clue (or null)
-
-            Don't return markdown or explanation. Just raw line.
-        ";
-
-        history += $"\nPlayer: {playerQuestion}\n";
-
-        yield return SendPromptToGemini(prompt, raw =>
+        while (attempt < maxAttempts && !success)
         {
-            try
+            attempt++;
+
+            string prompt = $@"
+                You are a suspect named {GlobalVariables.CURRENT_SUSPECT_NAME} with a {GlobalVariables.CURRENT_SUSPECT_PERSONALITY} personality.
+
+                Answer in character as a murder suspect. Be natural and react based on your backstory and clues.
+
+                Difficulty: {GlobalVariables.GAME_DIFFICULTY}
+                - Easy: You might reveal clues even accidentally.
+                - Normal: You might slip under pressure.
+                - Hard: Avoid giving clues unless heavily pressed.
+
+                Conversation so far:
+                {history}
+                Player: {playerQuestion}
+
+                Return exactly this format:
+                <BEGIN>
+                    response|expression|clue
+                <END>
+
+                Where:
+                - response = your spoken reply to the player
+                - expression = one of: angry, concerned, happy, neutral, smile (exactly one of these words)
+                - clue = a short clue if revealed, or null
+
+                ⚠️ DO NOT use tags like <response> or <expression>.
+                DO NOT add explanations or extra lines.
+                Only return one single line like this:
+                My answer to the player here|concerned|null
+            ";
+
+            history += $"\nPlayer: {playerQuestion}\n";
+
+            bool isDone = false;
+
+            yield return SendPromptToGemini(prompt, raw =>
             {
-                string[] parts = raw.Split('|');
-                if (parts.Length < 3) throw new Exception("Incomplete interrogation response");
-
-                SuspectInterrogationEntry entry = new()
+                try
                 {
-                    playerQuestion = playerQuestion,
-                    response = parts[0].Trim(),
-                    expression = parts[1].Trim(),
-                    clue = parts[2].Trim() == "null" ? null : parts[2].Trim()
-                };
+                    raw = Regex.Unescape(raw);
 
-                history += $"Suspect: {entry.response}\n";
-                interrogationLog.AddEntry(entry);
-                onComplete?.Invoke(entry);
+                    var match = Regex.Match(raw, "<BEGIN>(.*?)<END>", RegexOptions.Singleline);
+                    if (!match.Success) throw new Exception("Missing <BEGIN> or <END>");
 
-                if (!string.IsNullOrEmpty(entry.clue) && entry.clue != "null")
-                {
-                    FindObjectOfType<EvidenceManager>()?.AddEvidence(entry.clue);
+                    string content = match.Groups[1].Value.Trim();
+                    string[] parts = content.Split('|');
+
+                    if (parts.Length < 3)
+                        throw new Exception("Invalid format. Expected 3 parts: response|expression|clue");
+
+                    string response = parts[0].Trim();
+                    string expression = parts[1].Trim().ToLower();
+                    string clue = parts[2].Trim();
+
+                    if (!new[] { "angry", "concerned", "happy", "neutral", "smile" }.Contains(expression))
+                        throw new Exception("Invalid expression: " + expression);
+
+                    var entry = new SuspectInterrogationEntry
+                    {
+                        playerQuestion = playerQuestion,
+                        response = response,
+                        expression = expression,
+                        clue = clue == "null" ? null : clue
+                    };
+
+                    history += $"Suspect: {entry.response}\n";
+                    interrogationLog.AddEntry(entry);
+                    onComplete?.Invoke(entry);
+
+                    if (!string.IsNullOrEmpty(entry.clue))
+                        FindObjectOfType<EvidenceManager>()?.AddEvidence(entry.clue);
+
+                    success = true;
                 }
-            }
-            catch (Exception e)
-            {
-                Debug.LogError("❌ Failed to parse interrogation reply: " + e.Message);
-            }
-        });
+                catch (Exception e)
+                {
+                    Debug.LogWarning($"⚠️ Attempt {attempt} failed to parse interrogation reply: {e.Message}");
+                }
+                finally
+                {
+                    isDone = true;
+                }
+            });
+
+            while (!isDone) yield return null;
+
+            if (!success)
+                yield return new WaitForSeconds(1f);
+        }
+
+        if (!success)
+        {
+            Debug.LogError("❌ All attempts to get a valid suspect response failed.");
+            onComplete?.Invoke(null);
+        }
     }
+
 
     // ========== 3. Gemini Communication ==========
     private IEnumerator SendPromptToGemini(string prompt, Action<string> onResponseText)

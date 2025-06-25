@@ -1,8 +1,10 @@
 using TMPro;
 using UnityEngine;
+using UnityEngine.UI;
 
 public class ProfileManager : MonoBehaviour
 {
+    public Image profileImage;
     public TextMeshProUGUI nameText, idText, regionText, zipText;
 
     private string[] id = { "HAL9-000-0111", "FROD-O000-BGIN", "WLLY-WNK4-CHOC", "DCOT-RSTR-WHOV", "MTRX-BLUP-ILLZ" };
@@ -11,18 +13,20 @@ public class ProfileManager : MonoBehaviour
 
     private void Start()
     {
-        if (SuspectAIManager.GeneratedProfile != null)
+        if (SuspectManager.SuspectSingleton != null)
         {
-            DisplayProfile(SuspectAIManager.GeneratedProfile);
+            DisplayProfile(SuspectManager.SuspectSingleton);
         }
     }
 
-    public void DisplayProfile(SuspectProfile profile)
+    public void DisplayProfile(Suspect suspect)
     {
-        if (profile == null)
+        if (suspect == null)
             return;
 
-        nameText.text = "Name: " + profile.name;
+        profileImage.sprite = suspect.neutralSprite;
+
+        nameText.text = "Name: " + suspect.NPCName;
         idText.text = "Citizen ID: " + id[Random.Range(0, id.Length)];
         regionText.text = "Region: " + region[Random.Range(0, region.Length)];
         zipText.text = "Zip Code: " + zip[Random.Range(0, zip.Length)];

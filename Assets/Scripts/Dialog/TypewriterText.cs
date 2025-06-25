@@ -7,7 +7,8 @@ public class TypewriterText : MonoBehaviour
     public TextMeshProUGUI uiText;
     [TextArea] public string fullText;
     public float typeSpeed = 0.05f;
-    public bool isPlaySound;
+    public bool isPlaySound = true;
+    public bool IsTypingFinished { get; private set; } = false;
 
     private Coroutine typingCoroutine;
     private bool isTyping = false;
@@ -24,6 +25,7 @@ public class TypewriterText : MonoBehaviour
     private IEnumerator TypeText()
     {
         isTyping = true;
+        IsTypingFinished = false;
         skipRequested = false;
         uiText.text = "";
 
@@ -36,11 +38,15 @@ public class TypewriterText : MonoBehaviour
             }
 
             uiText.text += fullText[i];
-            SoundManager.PlaySound(SoundType.Typing, volume: GlobalVariables.SOUND_EFFECTS_VOLUME);
+            if (isPlaySound)
+            {
+                SoundManager.PlaySound(SoundType.Typing, volume: GlobalVariables.SOUND_EFFECTS_VOLUME);
+            }
             yield return new WaitForSeconds(typeSpeed);
         }
 
         isTyping = false;
+        IsTypingFinished = true;
     }
 
     public bool IsTyping() => isTyping;

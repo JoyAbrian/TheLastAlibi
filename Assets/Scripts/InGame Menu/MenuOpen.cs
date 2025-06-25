@@ -6,7 +6,7 @@ public class MenuOpen : MonoBehaviour
     public Button evidenceButton, logButton, profileButton, settingButton;
     public GameObject background, evidenceMenu, logMenu, profileMenu, settingMenu;
 
-    private void Start()
+    private void Awake()
     {
         evidenceButton.onClick.AddListener(() => ToggleMenu(evidenceMenu));
         logButton.onClick.AddListener(() => ToggleMenu(logMenu));

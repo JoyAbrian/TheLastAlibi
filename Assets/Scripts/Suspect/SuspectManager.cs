@@ -1,18 +1,20 @@
-using System.Collections;
-using System.Collections.Generic;
 using UnityEngine;
 
 public class SuspectManager : MonoBehaviour
 {
-    // Start is called before the first frame update
-    void Start()
-    {
-        
-    }
+    public Suspect[] suspects;
 
-    // Update is called once per frame
-    void Update()
+    public static Suspect SuspectSingleton;
+
+    private void Awake()
     {
-        
+        foreach (Suspect suspect in suspects)
+        {
+            if (suspect.NPCName == SuspectAIManager.GeneratedProfile.name)
+            {
+                SuspectSingleton = suspect;
+                break;
+            }
+        }
     }
 }
