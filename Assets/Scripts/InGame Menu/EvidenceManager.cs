@@ -1,0 +1,44 @@
+using UnityEngine;
+using TMPro;
+using System.Collections.Generic;
+
+public class EvidenceManager : MonoBehaviour
+{
+    public GameObject evidencePanel;
+    public GameObject evidenceTextPrefab;
+
+    private HashSet<string> knownEvidence = new();
+
+    private void Start()
+    {
+        if (SuspectAIManager.GeneratedProfile != null)
+        {
+            DisplayEvidence(SuspectAIManager.GeneratedProfile.evidence);
+        }
+    }
+
+    public void DisplayEvidence(List<string> clues)
+    {
+        foreach (string clue in clues)
+        {
+            AddEvidence(clue);
+        }
+    }
+
+    public void AddEvidence(string clue)
+    {
+        if (string.IsNullOrWhiteSpace(clue) || knownEvidence.Contains(clue))
+            return;
+
+        knownEvidence.Add(clue);
+
+        GameObject clueGO = Instantiate(evidenceTextPrefab, evidencePanel.transform);
+        TMP_Text clueText = clueGO.GetComponent<TMP_Text>();
+        if (clueText != null)
+        {
+            clueText.text = "• " + clue;
+            Canvas.ForceUpdateCanvases();
+            clueText.ForceMeshUpdate();
+        }
+    }
+}

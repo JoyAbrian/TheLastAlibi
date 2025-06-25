@@ -154,3 +154,13 @@ MonoBehaviour:
   - name: BookClose
     sounds:
     - {fileID: 8300000, guid: bd479989bbb398942a91fdeb8808c515, type: 3}
+  - name: Typing
+    sounds:
+    - {fileID: 8300000, guid: 1c18b037bbf770b44acbcbab2c3cdee1, type: 3}
+    - {fileID: 8300000, guid: 9b4c5026825e7d74c966b6ea39512ee3, type: 3}
+    - {fileID: 8300000, guid: 92f69ccc8c43e104ba56cf5944780c96, type: 3}
+    - {fileID: 8300000, guid: d3f5301d4cf350a4c983fb66045b7169, type: 3}
+    - {fileID: 8300000, guid: f226fcf065a2ff844aa5eac4953d6c36, type: 3}
+  - name: GameStart
+    sounds:
+    - {fileID: 8300000, guid: 7b3c2990067852c418ae4a2b91836271, type: 3}

@@ -1,6 +1,7 @@
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
 using UnityEngine;
@@ -8,23 +9,20 @@ using UnityEngine.Networking;
 
 public class SuspectAIManager : MonoBehaviour
 {
-    public static SuspectProfile GeneratedProfile; // <== static for cross-scene access
-
     [Header("Gemini API Key JSON")]
     public TextAsset apiKeyFile;
+
+    public static SuspectProfile GeneratedProfile;
+    private string apiKey;
+    private string model = "gemini-2.0-flash";
+    private string history = "";
 
     [HideInInspector] public SuspectProfile currentProfile;
     public SuspectInterrogationLog interrogationLog = new();
 
-    private string apiKey;
+    [Serializable] private class APIKeyWrapper { public string key; }
 
-    [Serializable]
-    private class APIKeyWrapper { public string key; }
-
-    private void Awake()
-    {
-        LoadAPIKey();
-    }
+    private void Awake() => LoadAPIKey();
 
     private void LoadAPIKey()
     {
@@ -39,7 +37,7 @@ public class SuspectAIManager : MonoBehaviour
         }
     }
 
-    // ======== PROFILE GENERATION ========
+    // ========== 1. Generate Profile ==========
     public void GenerateSuspectProfile(Action<SuspectProfile> onGenerated)
     {
         StartCoroutine(GenerateSuspectRoutine(onGenerated));
@@ -51,111 +49,161 @@ public class SuspectAIManager : MonoBehaviour
             Generate a fictional murder suspect with:
             - name: {GlobalVariables.CURRENT_SUSPECT_NAME}
             - personality: {GlobalVariables.CURRENT_SUSPECT_PERSONALITY}
-            - a 2�4 paragraph backstory
-            - 1�3 clues hidden in the story depending on difficulty
+            - a 2–4 very short paragraph backstory (each paragraph separated by '\\n')
+            - 1–3 very short clues hidden in the story (each clue separated by '\\n')
 
-            Return JSON like:
-            {{
-              ""name"": ""<name>"",
-              ""personality"": ""<personality>"",
-              ""backstory"": [""..."", ""..."", ""...""],
-              ""evidence"": [""..."", ""..."", ""...""]
-            }}
+            Return plain text like:
+            <BEGIN>
+                name|personality|backstory paragraph 1\\nparagraph 2\\n...|clue 1\\nclue 2\\nclue 3
+            <END>
 
-            Difficulty: {GlobalVariables.GAME_DIFFICULTY}
+            Don't return markdown or explanation. Just raw delimited string.
         ";
 
-        yield return SendPromptToGemini(prompt, json =>
+        int maxAttempts = 3;
+        for (int attempt = 0; attempt < maxAttempts; attempt++)
         {
-            SuspectProfile profile = JsonUtility.FromJson<SuspectProfile>(json);
-            currentProfile = profile;
-            GeneratedProfile = profile;
-            onGenerated?.Invoke(profile);
-        });
+            bool success = false;
+
+            yield return SendPromptToGemini(prompt, rawText =>
+            {
+                try
+                {
+                    var profile = ParseDelimitedSuspectProfile(rawText);
+                    currentProfile = profile;
+                    GeneratedProfile = profile;
+
+                    history = $"Backstory:\n{string.Join("\n", profile.backstory)}\nClues:\n- {string.Join("\n- ", profile.evidence)}\n";
+                    onGenerated?.Invoke(profile);
+                    success = true;
+                }
+                catch (Exception e)
+                {
+                    Debug.LogWarning($"⚠️ Attempt {attempt + 1} failed: {e.Message}");
+                }
+            });
+
+            if (success) yield break;
+            yield return new WaitForSeconds(1f);
+        }
+
+        Debug.LogError("❌ Failed to generate valid suspect after 3 attempts.");
     }
 
-    // ======== INTERROGATION ========
-    public void SendPlayerQuestion(string playerQuestion, Action<SuspectInterrogationEntry> onResponse)
+    private SuspectProfile ParseDelimitedSuspectProfile(string raw)
     {
-        StartCoroutine(SendInterrogationRoutine(playerQuestion, onResponse));
+        raw = System.Text.RegularExpressions.Regex.Unescape(raw);
+
+        Match match = Regex.Match(raw, "<BEGIN>(.*?)<END>", RegexOptions.Singleline);
+        if (!match.Success)
+            throw new Exception("No valid content between <BEGIN> and <END>");
+
+        string delimited = match.Groups[1].Value.Trim();
+
+        string[] parts = delimited.Split('|');
+        if (parts.Length < 4)
+        {
+            Debug.LogError("🛑 Delimited response was too short:\n" + delimited);
+            throw new Exception("Incomplete delimited profile. Expected 4 parts: name, personality, backstory, evidence");
+        }
+
+        List<string> CleanSplit(string input)
+        {
+            return input.Split(new[] { "\\n" }, StringSplitOptions.None)
+                        .Select(p => p.Trim())
+                        .Where(p => !string.IsNullOrWhiteSpace(p))
+                        .ToList();
+        }
+
+        return new SuspectProfile
+        {
+            name = parts[0].Trim(),
+            personality = parts[1].Trim(),
+            backstory = CleanSplit(parts[2]),
+            evidence = CleanSplit(parts[3])
+        };
+    }
+
+    // ========== 2. Interrogation ==========
+    public void SendPlayerQuestion(string question, Action<SuspectInterrogationEntry> onResponse)
+    {
+        StartCoroutine(SendInterrogationRoutine(question, onResponse));
     }
 
     private IEnumerator SendInterrogationRoutine(string playerQuestion, Action<SuspectInterrogationEntry> onComplete)
     {
-        string difficulty = GlobalVariables.GAME_DIFFICULTY;
-        string backstory = string.Join("\n", currentProfile.backstory);
-        string evidence = string.Join("\n- ", currentProfile.evidence);
-
-        StringBuilder conversationHistory = new();
-        foreach (var entry in interrogationLog.entries)
-        {
-            conversationHistory.AppendLine($"Player: {entry.playerQuestion}");
-            conversationHistory.AppendLine($"Suspect: {entry.response}");
-        }
-
         string prompt = $@"
-            You are a suspect named {GlobalVariables.CURRENT_SUSPECT_NAME}. Your personality is {GlobalVariables.CURRENT_SUSPECT_PERSONALITY}.
+            You are a suspect named {GlobalVariables.CURRENT_SUSPECT_NAME} with a {GlobalVariables.CURRENT_SUSPECT_PERSONALITY} personality.
 
-            ### Backstory:
-            {backstory}
+            Answer in character as a murder suspect. Be natural and react based on your backstory and clues.
 
-            ### Known facts (clues):
-            - {evidence}
+            Difficulty: {GlobalVariables.GAME_DIFFICULTY}
+            - Easy: You might reveal clues even accidentally.
+            - Normal: You might slip under pressure.
+            - Hard: Avoid giving clues unless heavily pressed.
 
-            ### Previous conversation:
-            {conversationHistory.ToString().Trim()}
-
-            Now answer the next question **in character**. Only return JSON with these keys:
-            {{
-              ""response"": ""<your reply>"",
-              ""expression"": ""<Angry|Concerned|Happy|Neutral|Smile>"",
-              ""clue"": ""<optional clue from above or null>""
-            }}
-
-            ### Difficulty: {difficulty}
-            - Easy: You might reveal clues easily, even accidentally.
-            - Normal: You are cautious, but might slip up if pressed.
-            - Hard: Avoid giving clues unless cornered logically.
-
+            Conversation so far:
+            {history}
             Player: {playerQuestion}
+
+            Return delimited text like:
+            response|expression|clue (or null)
+
+            Don't return markdown or explanation. Just raw line.
         ";
 
-        yield return SendPromptToGemini(prompt, json =>
-        {
-            SuspectInterrogationEntry entry = JsonUtility.FromJson<SuspectInterrogationEntry>(json);
-            entry.playerQuestion = playerQuestion;
+        history += $"\nPlayer: {playerQuestion}\n";
 
-            interrogationLog.AddEntry(entry);
-            onComplete?.Invoke(entry);
+        yield return SendPromptToGemini(prompt, raw =>
+        {
+            try
+            {
+                string[] parts = raw.Split('|');
+                if (parts.Length < 3) throw new Exception("Incomplete interrogation response");
+
+                SuspectInterrogationEntry entry = new()
+                {
+                    playerQuestion = playerQuestion,
+                    response = parts[0].Trim(),
+                    expression = parts[1].Trim(),
+                    clue = parts[2].Trim() == "null" ? null : parts[2].Trim()
+                };
+
+                history += $"Suspect: {entry.response}\n";
+                interrogationLog.AddEntry(entry);
+                onComplete?.Invoke(entry);
+
+                if (!string.IsNullOrEmpty(entry.clue) && entry.clue != "null")
+                {
+                    FindObjectOfType<EvidenceManager>()?.AddEvidence(entry.clue);
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogError("❌ Failed to parse interrogation reply: " + e.Message);
+            }
         });
     }
 
-    // ======== GEMINI COMMUNICATION ========
-    private IEnumerator SendPromptToGemini(string prompt, Action<string> onJsonExtracted)
+    // ========== 3. Gemini Communication ==========
+    private IEnumerator SendPromptToGemini(string prompt, Action<string> onResponseText)
     {
-        var body = new
-        {
-            contents = new[]
-            {
-                new {
-                    parts = new[] {
-                        new { text = prompt.Trim() }
-                    }
-                }
-            }
-        };
+        string requestBody = $@"{{
+            ""contents"": [
+            {{
+                ""parts"": [{{ ""text"": {JsonEscape(history + "\n" + prompt)} }}]
+            }}
+            ]
+        }}";
 
-        string jsonBody = JsonUtility.ToJson(body);
-        byte[] bodyRaw = Encoding.UTF8.GetBytes(jsonBody);
-
+        byte[] bodyRaw = Encoding.UTF8.GetBytes(requestBody);
         UnityWebRequest req = new UnityWebRequest(
-            "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro-latest:generateContent",
+            $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}",
             "POST"
         );
 
         req.uploadHandler = new UploadHandlerRaw(bodyRaw);
         req.downloadHandler = new DownloadHandlerBuffer();
-        req.SetRequestHeader("Authorization", $"Bearer {apiKey}");
         req.SetRequestHeader("Content-Type", "application/json");
 
         yield return req.SendWebRequest();
@@ -167,30 +215,30 @@ public class SuspectAIManager : MonoBehaviour
         }
 
         string responseText = req.downloadHandler.text;
-        string extractedJson = ExtractJSONFromResponse(responseText);
+        string extracted = ExtractDelimitedResponse(responseText);
 
-        if (string.IsNullOrEmpty(extractedJson))
+        if (string.IsNullOrEmpty(extracted))
         {
-            Debug.LogError("Failed to parse Gemini JSON.");
+            Debug.LogError("❌ Failed to extract delimited text from Gemini response.");
             yield break;
         }
 
-        onJsonExtracted?.Invoke(extractedJson);
+        Debug.Log("📦 Raw Delimited:\n" + extracted);
+        onResponseText?.Invoke(extracted);
     }
 
-    private string ExtractJSONFromResponse(string responseText)
+    private string ExtractDelimitedResponse(string responseText)
     {
-        string marker = "\"parts\":[{\"text\":\"";
-        int start = responseText.IndexOf(marker);
-        if (start == -1) return null;
-        start += marker.Length;
+        var match = Regex.Match(responseText, "\"text\"\\s*:\\s*\"(.*?)\"", RegexOptions.Singleline);
+        if (!match.Success) return null;
 
-        int end = responseText.IndexOf("\"}],", start);
-        if (end == -1) end = responseText.IndexOf("\"}]", start);
-        if (end == -1) return null;
+        string raw = match.Groups[1].Value;
+        raw = raw.Replace("\\n", "\\n").Replace("\\\"", "\"").Replace("\\\\", "\\").Trim();
+        return raw;
+    }
 
-        string json = responseText.Substring(start, end - start);
-        json = Regex.Unescape(json);
-        return json.Trim().Trim('`');
+    private string JsonEscape(string raw)
+    {
+        return "\"" + raw.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\r", "") + "\"";
     }
 }

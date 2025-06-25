@@ -1,6 +1,5 @@
 using System.Collections;
 using UnityEngine;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
 public class LoadingMenu : MonoBehaviour
@@ -9,7 +8,8 @@ public class LoadingMenu : MonoBehaviour
     public SuspectAIManager suspectAIManager;
     public Suspect[] suspects;
 
-    public string nextSceneName = "GameScene";
+    public FadeManager fadeManager;
+    public string nextSceneName = "BackstoryScene";
 
     private void Start()
     {
@@ -25,36 +25,33 @@ public class LoadingMenu : MonoBehaviour
         GlobalVariables.CURRENT_SUSPECT_NAME = GlobalVariables.CURRENT_SUSPECT.NPCName;
         GlobalVariables.CURRENT_SUSPECT_PERSONALITY = GlobalVariables.CURRENT_SUSPECT.personality;
 
+        float stallPoint = Random.Range(0.3f, 0.6f);
         float progress = 0f;
         bool isDone = false;
 
         suspectAIManager.GenerateSuspectProfile(profile =>
         {
-            Debug.Log("Suspect generated: " + profile.name);
             isDone = true;
         });
 
         while (!isDone)
         {
-            progress += Time.deltaTime * 0.2f;
+            if (progress < stallPoint)
+            {
+                progress += Time.deltaTime * 0.2f;
+                loadingSlider.value = Mathf.Clamp01(progress);
+            }
+            yield return null;
+        }
+
+        while (progress < 1f)
+        {
+            progress += Time.deltaTime * 0.5f;
             loadingSlider.value = Mathf.Clamp01(progress);
             yield return null;
         }
 
-        yield return new WaitForSeconds(0.5f);
-
-        AsyncOperation loadOp = SceneManager.LoadSceneAsync(nextSceneName);
-        loadOp.allowSceneActivation = false;
-
-        while (!loadOp.isDone)
-        {
-            float loadProgress = Mathf.Clamp01(loadOp.progress / 0.9f);
-            loadingSlider.value = loadProgress;
-
-            if (loadProgress >= 1f)
-                loadOp.allowSceneActivation = true;
-
-            yield return null;
-        }
+        yield return new WaitForSeconds(2f);
+        fadeManager.FadeToScene(nextSceneName);
     }
 }

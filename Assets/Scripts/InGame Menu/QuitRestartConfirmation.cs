@@ -4,15 +4,16 @@ using UnityEngine.SceneManagement;
 public class QuitRestartConfirmation : MonoBehaviour
 {
     public GameObject settingsPanel;
+    public FadeManager fadeManager;
 
     public void RestartGame()
     {
-        SceneManager.LoadScene(SceneManager.GetActiveScene().name);
+        fadeManager.FadeToScene(SceneManager.GetActiveScene().name);
     }
 
     public void QuitGame()
     {
-        SceneManager.LoadScene("MenuScene");
+        fadeManager.FadeToScene("MenuScene");
     }
 
     public void Back()

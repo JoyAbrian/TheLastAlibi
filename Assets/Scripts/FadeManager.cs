@@ -34,4 +34,24 @@ public class FadeManager : MonoBehaviour
 
         SceneManager.LoadScene(sceneName);
     }
+
+    public IEnumerator FadeIn()
+    {
+        fadeImage.gameObject.SetActive(true);
+
+        float elapsed = 0f;
+        Color color = fadeImage.color;
+        color.a = 1f;
+        fadeImage.color = color;
+
+        while (elapsed < fadeDuration)
+        {
+            elapsed += Time.deltaTime;
+            color.a = 1f - Mathf.Clamp01(elapsed / fadeDuration);
+            fadeImage.color = color;
+            yield return null;
+        }
+
+        fadeImage.gameObject.SetActive(false);
+    }
 }

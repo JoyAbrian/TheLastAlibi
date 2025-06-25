@@ -10,6 +10,8 @@ public enum SoundType
     ButtonClick,
     BookOpen,
     BookClose,
+    Typing,
+    GameStart
 }
 
 [RequireComponent(typeof(AudioSource)), ExecuteInEditMode]
