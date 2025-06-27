@@ -9,12 +9,18 @@ public class DialogUIManager : MonoBehaviour
     public GameObject loadingText;
     public TextMeshProUGUI npcText;
     public TypewriterText typewriter;
+
+    [Header("OTHER UI")]
     public Image npcFace;
+    public Image playerFace;
+    public GameObject playerName, npcName;
 
     private bool isShowingResponse = false;
 
     private void Start()
     {
+        ChangeFace("neutral");
+
         typewriter.uiText = npcText;
         playerInput.onSubmit.AddListener(_ => OnSend());
         ShowPlayerInput();
@@ -37,6 +43,9 @@ public class DialogUIManager : MonoBehaviour
 
     void ShowPlayerInput()
     {
+        playerName.SetActive(true);
+        npcName.SetActive(false);
+
         npcText.text = "";
         playerInput.text = "";
         playerInput.gameObject.SetActive(true);
@@ -46,6 +55,9 @@ public class DialogUIManager : MonoBehaviour
 
     void HideAll()
     {
+        playerName.SetActive(false);
+        npcName.SetActive(false);
+
         playerInput.gameObject.SetActive(false);
         loadingText.SetActive(false);
         npcText.text = "";
@@ -70,6 +82,7 @@ public class DialogUIManager : MonoBehaviour
 
         FindObjectOfType<SuspectAIManager>().SendPlayerQuestion(question, entry =>
         {
+            npcName.SetActive(true);
             npcResponse = entry.response;
             ChangeFace(entry.expression);
             isDone = true;

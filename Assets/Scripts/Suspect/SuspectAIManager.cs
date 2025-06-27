@@ -132,7 +132,7 @@ public class SuspectAIManager : MonoBehaviour
 
     private IEnumerator SendInterrogationRoutine(string playerQuestion, Action<SuspectInterrogationEntry> onComplete)
     {
-        int maxAttempts = 3;
+        int maxAttempts = 10;
         int attempt = 0;
         bool success = false;
 

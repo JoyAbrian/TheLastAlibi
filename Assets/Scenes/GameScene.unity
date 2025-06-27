@@ -6201,6 +6201,9 @@ MonoBehaviour:
   npcText: {fileID: 1409680196}
   typewriter: {fileID: 45343420}
   npcFace: {fileID: 1589161259}
+  playerFace: {fileID: 841847709}
+  playerName: {fileID: 1314253542}
+  npcName: {fileID: 831661850}
 --- !u!1 &1241241897
 GameObject:
   m_ObjectHideFlags: 0
