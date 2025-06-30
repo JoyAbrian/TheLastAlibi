@@ -14,7 +14,7 @@ public class StatsBackground : MonoBehaviour
         if (StatisticVariables.finalAccusation == GlobalVariables.IS_SUSPECT_GUILTY)
         {
             statsBackground.sprite = trueBackground;
-            statsText.text = "TRUE ACCUSATION";
+            statsText.text = "CORRECT ACCUSATION";
         } 
         else
         {

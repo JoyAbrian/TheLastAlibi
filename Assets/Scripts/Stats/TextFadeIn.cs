@@ -7,8 +7,10 @@ public class TextFadeIn : MonoBehaviour
     public List<CanvasGroup> textGroups;
     public float fadeDuration = 0.5f;
     public float delayBetween = 0.2f;
+    public FadeManager fadeManager;
 
     private bool skipCurrent = false;
+    private bool allShown = false;
 
     private void Start()
     {
@@ -19,7 +21,14 @@ public class TextFadeIn : MonoBehaviour
     {
         if (Input.GetMouseButtonDown(0))
         {
-            skipCurrent = true;
+            if (!allShown)
+            {
+                skipCurrent = true;
+            }
+            else
+            {
+                fadeManager.FadeToScene("MenuScene");
+            }
         }
     }
 
@@ -50,5 +59,7 @@ public class TextFadeIn : MonoBehaviour
             group.alpha = 1f;
             yield return new WaitForSeconds(delayBetween);
         }
+
+        allShown = true;
     }
 }
