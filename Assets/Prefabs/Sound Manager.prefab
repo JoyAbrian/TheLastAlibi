@@ -164,3 +164,6 @@ MonoBehaviour:
   - name: GameStart
     sounds:
     - {fileID: 8300000, guid: 7b3c2990067852c418ae4a2b91836271, type: 3}
+  - name: Swish
+    sounds:
+    - {fileID: 8300000, guid: c0a07757545bda3468f553a75c9bf190, type: 3}

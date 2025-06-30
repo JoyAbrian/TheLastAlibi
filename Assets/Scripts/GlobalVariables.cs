@@ -7,7 +7,7 @@ public class GlobalVariables : MonoBehaviour
 
     public static int TOTAL_CLUES_FOUND = 0;
     public static int WRONG_ACCUSATIONS = 0;
-    public static bool MADE_FINAL_ACCUSATION = false;
+    public static bool IS_SUSPECT_GUILTY = false;
 
     public static Suspect CURRENT_SUSPECT;
     public static string CURRENT_SUSPECT_NAME = "";
@@ -26,7 +26,7 @@ public class GlobalVariables : MonoBehaviour
         GAME_DIFFICULTY = "Normal";
         TOTAL_CLUES_FOUND = 0;
         WRONG_ACCUSATIONS = 0;
-        MADE_FINAL_ACCUSATION = false;
+        IS_SUSPECT_GUILTY = false;
 
         CURRENT_SUSPECT = null;
         CURRENT_SUSPECT_NAME = "";

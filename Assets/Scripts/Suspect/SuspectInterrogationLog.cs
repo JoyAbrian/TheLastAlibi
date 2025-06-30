@@ -1,7 +1,11 @@
 using System.Collections.Generic;
+using UnityEngine;
 
 public class SuspectInterrogationLog
 {
+    public EvidenceManager evidenceManager;
+    public LogManager logManager;
+
     public List<SuspectInterrogationEntry> entries = new();
 
     public void AddEntry(SuspectInterrogationEntry entry)

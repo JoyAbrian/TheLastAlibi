@@ -624,8 +624,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   uiText: {fileID: 156912021}
   fullText: 
-  typeSpeed: 0.05
-  isPlaySound: 0
+  typeSpeed: 0.1
+  isPlaySound: 1
 --- !u!1 &1495452179
 GameObject:
   m_ObjectHideFlags: 0

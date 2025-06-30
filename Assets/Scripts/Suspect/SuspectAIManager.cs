@@ -208,9 +208,6 @@ public class SuspectAIManager : MonoBehaviour
                     interrogationLog.AddEntry(entry);
                     onComplete?.Invoke(entry);
 
-                    if (!string.IsNullOrEmpty(entry.clue))
-                        FindObjectOfType<EvidenceManager>()?.AddEvidence(entry.clue);
-
                     success = true;
                 }
                 catch (Exception e)
