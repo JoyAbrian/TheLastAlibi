@@ -10,6 +10,8 @@ public class LogManager : MonoBehaviour
     {
         CreateText($"You: {playerText}");
         CreateText($"{SuspectManager.SuspectSingleton.NPCName}: {npcText}");
+
+        StatisticVariables.totalConversation++;
     }
 
     private void CreateText(string content)

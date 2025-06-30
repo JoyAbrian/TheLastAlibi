@@ -1,6 +1,7 @@
 using System;
 using TMPro;
 using UnityEngine;
+using UnityEngine.SocialPlatforms.Impl;
 
 public class StatsManager : MonoBehaviour
 {
@@ -40,6 +41,11 @@ public class StatsManager : MonoBehaviour
     public int CalculateAccuracy()
     {
         int score = 100;
+        if (StatisticVariables.finalAccusation != GlobalVariables.IS_SUSPECT_GUILTY)
+        {
+            score -= 80; // Penalty for false accusation
+        }
+
         score -= StatisticVariables.totalTimeSpend / 60 * 2;
         score -= StatisticVariables.totalConversation * 1;
         score += StatisticVariables.totalCluesFound * 5;

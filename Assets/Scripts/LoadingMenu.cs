@@ -22,6 +22,7 @@ public class LoadingMenu : MonoBehaviour
 
         int index = Random.Range(0, suspects.Length);
         GlobalVariables.CURRENT_SUSPECT = suspects[index];
+        GlobalVariables.IS_SUSPECT_GUILTY = Random.Range(0f, 1f) > 0.5f;
         GlobalVariables.CURRENT_SUSPECT_NAME = GlobalVariables.CURRENT_SUSPECT.NPCName;
         GlobalVariables.CURRENT_SUSPECT_PERSONALITY = GlobalVariables.CURRENT_SUSPECT.personality;
 

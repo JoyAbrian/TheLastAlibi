@@ -206,6 +206,19 @@ public class SuspectAIManager : MonoBehaviour
 
                     history += $"Suspect: {entry.response}\n";
                     interrogationLog.AddEntry(entry);
+
+                    var logManager = GetComponent<LogManager>();
+                    if (logManager != null)
+                    {
+                        logManager.AddLog(entry.playerQuestion, entry.response);
+                    }
+
+                    var clueManager = GetComponent<EvidenceManager>();
+                    if (clueManager != null)
+                    {
+                        clueManager.AddEvidence(entry.clue);
+                    }
+
                     onComplete?.Invoke(entry);
 
                     success = true;

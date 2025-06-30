@@ -15,11 +15,6 @@ public class EvidenceManager : MonoBehaviour
         {
             DisplayEvidence(SuspectAIManager.GeneratedProfile.evidence);
         }
-
-        if (FindObjectOfType<SuspectAIManager>()?.interrogationLog != null)
-        {
-            SyncEvidenceFromLog(FindObjectOfType<SuspectAIManager>().interrogationLog);
-        }
     }
 
     public void DisplayEvidence(List<string> clues)
@@ -46,17 +41,6 @@ public class EvidenceManager : MonoBehaviour
             clueText.text = "• " + clue;
             Canvas.ForceUpdateCanvases();
             clueText.ForceMeshUpdate();
-        }
-    }
-
-    public void SyncEvidenceFromLog(SuspectInterrogationLog log)
-    {
-        if (log == null) return;
-
-        List<string> clues = log.GetAllClues();
-        foreach (string clue in clues)
-        {
-            AddEvidence(clue);
         }
     }
 }
