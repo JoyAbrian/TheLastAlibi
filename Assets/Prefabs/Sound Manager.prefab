@@ -167,3 +167,6 @@ MonoBehaviour:
   - name: Swish
     sounds:
     - {fileID: 8300000, guid: c0a07757545bda3468f553a75c9bf190, type: 3}
+  - name: Start
+    sounds:
+    - {fileID: 8300000, guid: d95619323edaa224db3d9fd11bc8a409, type: 3}

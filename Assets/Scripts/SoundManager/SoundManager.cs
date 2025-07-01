@@ -13,7 +13,7 @@ public enum SoundType
     Typing,
     GameStart,
     Swish,
-
+    Start,
 }
 
 [RequireComponent(typeof(AudioSource)), ExecuteInEditMode]
