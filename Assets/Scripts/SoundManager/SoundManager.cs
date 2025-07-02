@@ -16,7 +16,7 @@ public enum SoundType
     Start,
 }
 
-[RequireComponent(typeof(AudioSource)), ExecuteInEditMode]
+[RequireComponent(typeof(AudioSource))]
 public class SoundManager : MonoBehaviour
 {
     [SerializeField] private SoundList[] soundList;
@@ -25,7 +25,15 @@ public class SoundManager : MonoBehaviour
 
     private void Awake()
     {
-        instance = this;
+        if (instance == null)
+        {
+            instance = this;
+            DontDestroyOnLoad(gameObject);
+        }
+        else if (instance != this)
+        {
+            Destroy(gameObject);
+        }
     }
 
     private void Start()
