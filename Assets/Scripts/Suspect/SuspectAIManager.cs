@@ -9,6 +9,9 @@ using UnityEngine.Networking;
 
 public class SuspectAIManager : MonoBehaviour
 {
+    [Header("Case Database")]
+    public CaseDatabase caseDatabase;
+
     [Header("Gemini API Key JSON")]
     public TextAsset apiKeyFile;
 
@@ -21,8 +24,31 @@ public class SuspectAIManager : MonoBehaviour
     public SuspectInterrogationLog interrogationLog = new();
 
     [Serializable] private class APIKeyWrapper { public string key; }
+    private CaseData currentCase;
 
     private void Awake() => LoadAPIKey();
+
+    private void Start()
+    {
+        if (caseDatabase == null || caseDatabase.cases == null || caseDatabase.cases.Count == 0)
+        {
+            Debug.LogError("⚠️ CaseDatabase is empty or not assigned!");
+            return;
+        }
+
+        if (GeneratedProfile != null)
+        {
+            currentProfile = GeneratedProfile;
+            currentCase = GlobalVariables.CURRENT_CASE;
+            history = $"Backstory:\n{string.Join("\n", currentProfile.backstory ?? new List<string>())}\nClues:\n- {string.Join("\n- ", currentProfile.evidence ?? new List<string>())}\n";
+            Debug.Log($"♻️ Using existing case: {currentCase?.caseName} | Difficulty: {GlobalVariables.GAME_DIFFICULTY}");
+        }
+        else
+        {
+            SelectRandomCaseByDifficulty();
+            Debug.Log($"🎯 Loaded Case: {currentCase.caseName} | Difficulty: {currentCase.difficulty}");
+        }
+    }
 
     private void LoadAPIKey()
     {
@@ -37,6 +63,37 @@ public class SuspectAIManager : MonoBehaviour
         }
     }
 
+    /// <summary>
+    /// Pilih case random sesuai GlobalVariables.GAME_DIFFICULTY.
+    /// Jika difficulty invalid atau tidak ada case yang cocok, fallback ke seluruh daftar.
+    /// </summary>
+    private void SelectRandomCaseByDifficulty()
+    {
+        DifficultyLevel selectedDifficulty;
+        bool parsed = Enum.TryParse(GlobalVariables.GAME_DIFFICULTY, true, out selectedDifficulty);
+
+        if (!parsed)
+        {
+            Debug.LogWarning("⚠️ GlobalVariables.GAME_DIFFICULTY invalid or empty, defaulting to Normal");
+            selectedDifficulty = DifficultyLevel.Normal;
+        }
+
+        var filtered = caseDatabase.cases.Where(c => c.difficulty == selectedDifficulty).ToList();
+
+        if (filtered.Count == 0)
+        {
+            Debug.LogWarning($"⚠️ No cases found for difficulty {selectedDifficulty}. Falling back to all cases.");
+            filtered = caseDatabase.cases.ToList();
+        }
+
+        int idx = UnityEngine.Random.Range(0, filtered.Count);
+        currentCase = filtered[idx];
+
+        // keep global difficulty & case in-sync
+        GlobalVariables.GAME_DIFFICULTY = currentCase.difficulty.ToString();
+        GlobalVariables.CURRENT_CASE = currentCase;
+    }
+
     // ========== 1. Generate Profile ==========
     public void GenerateSuspectProfile(Action<SuspectProfile> onGenerated)
     {
@@ -45,19 +102,28 @@ public class SuspectAIManager : MonoBehaviour
 
     private IEnumerator GenerateSuspectRoutine(Action<SuspectProfile> onGenerated)
     {
+        string caseContext = currentCase != null ? $"Case: {currentCase.caseName}" : "Case: Unknown";
+
         string prompt = $@"
-            Generate a fictional murder suspect with:
+            {caseContext}
+
+            Generate a fictional SUSPECT profile. Always from suspect POV (never victim or narrator).
+            Details:
             - name: {GlobalVariables.CURRENT_SUSPECT_NAME}
             - personality: {GlobalVariables.CURRENT_SUSPECT_PERSONALITY}
-            - a 2–4 very short paragraph backstory (each paragraph separated by '\\n')
-            - 1–3 very short clues hidden in the story (each clue separated by '\\n')
+            - a 2–4 very short paragraph backstory (each separated by '\n')
+            - 1–3 very short clues hidden in the story (each separated by '\n')
+            - guilty: decide randomly TRUE or FALSE
 
-            Return plain text like:
+            Rules:
+            - Always write from suspect's POV (first person).
+            - If guilty = TRUE, suspect hides something or lies.
+            - If guilty = FALSE, suspect defends themselves, frustrated at being accused.
+
+            Return plain text only:
             <BEGIN>
-                name|personality|backstory paragraph 1\\nparagraph 2\\n...|clue 1\\nclue 2\\nclue 3
+            name|personality|paragraph1\nparagraph2...|clue1\nclue2|TRUE/FALSE
             <END>
-
-            Don't return markdown or explanation. Never add second name, just use the first name. Just raw delimited string.
         ";
 
         int maxAttempts = 10;
@@ -70,10 +136,15 @@ public class SuspectAIManager : MonoBehaviour
                 try
                 {
                     var profile = ParseDelimitedSuspectProfile(rawText);
-                    currentProfile = profile;
-                    GeneratedProfile = profile;
+                    if (profile == null) throw new Exception("Parsed profile is null");
 
-                    history = $"Backstory:\n{string.Join("\n", profile.backstory)}\nClues:\n- {string.Join("\n- ", profile.evidence)}\n";
+                    currentProfile = profile;
+                    GeneratedProfile = profile; // ✅ Simpan supaya tidak regenerate di scene berikutnya
+
+                    // ✅ Set guilty langsung dari profile
+                    GlobalVariables.IS_SUSPECT_GUILTY = profile.isGuilty;
+
+                    history = $"Backstory:\n{string.Join("\n", profile.backstory ?? new List<string>())}\nClues:\n- {string.Join("\n- ", profile.evidence ?? new List<string>())}\n";
                     onGenerated?.Invoke(profile);
                     success = true;
                 }
@@ -87,40 +158,43 @@ public class SuspectAIManager : MonoBehaviour
             yield return new WaitForSeconds(1f);
         }
 
-        Debug.LogError("❌ Failed to generate valid suspect after 3 attempts.");
+        Debug.LogError("❌ Failed to generate valid suspect after multiple attempts.");
     }
 
     private SuspectProfile ParseDelimitedSuspectProfile(string raw)
     {
-        raw = System.Text.RegularExpressions.Regex.Unescape(raw);
+        raw = Regex.Unescape(raw ?? "");
 
         Match match = Regex.Match(raw, "<BEGIN>(.*?)<END>", RegexOptions.Singleline);
         if (!match.Success)
             throw new Exception("No valid content between <BEGIN> and <END>");
 
         string delimited = match.Groups[1].Value.Trim();
-
         string[] parts = delimited.Split('|');
-        if (parts.Length < 4)
-        {
-            Debug.LogError("🛑 Delimited response was too short:\n" + delimited);
-            throw new Exception("Incomplete delimited profile. Expected 4 parts: name, personality, backstory, evidence");
-        }
+
+        if (parts.Length < 5)
+            throw new Exception("Incomplete delimited profile. Expected 5 parts: name, personality, backstory, evidence, guilty");
 
         List<string> CleanSplit(string input)
         {
+            if (string.IsNullOrEmpty(input)) return new List<string>();
             return input.Split(new[] { "\\n" }, StringSplitOptions.None)
                         .Select(p => p.Trim())
                         .Where(p => !string.IsNullOrWhiteSpace(p))
                         .ToList();
         }
 
+        // Normalize guilty parsing
+        string guiltRaw = parts[4].Trim().ToLower();
+        bool isGuilty = guiltRaw == "true" || guiltRaw == "yes" || guiltRaw == "guilty" || guiltRaw == "1";
+
         return new SuspectProfile
         {
             name = parts[0].Trim(),
             personality = parts[1].Trim(),
             backstory = CleanSplit(parts[2]),
-            evidence = CleanSplit(parts[3])
+            evidence = CleanSplit(parts[3]),
+            isGuilty = isGuilty
         };
     }
 
@@ -141,33 +215,35 @@ public class SuspectAIManager : MonoBehaviour
             attempt++;
 
             string prompt = $@"
-                You are a suspect named {GlobalVariables.CURRENT_SUSPECT_NAME} with a {GlobalVariables.CURRENT_SUSPECT_PERSONALITY} personality.
+                You are the suspect named {GlobalVariables.CURRENT_SUSPECT_NAME} 
+                with a {GlobalVariables.CURRENT_SUSPECT_PERSONALITY} personality.
 
-                Answer in character as a murder suspect. Be natural and react based on your backstory and clues.
+                Always answer as THIS suspect (first person). 
+                Never say you are the victim. Never speak as narrator. Always suspect POV.
+
+                Guilt status: {(GlobalVariables.IS_SUSPECT_GUILTY ? "GUILTY" : "INNOCENT")}
+                - If guilty: act evasive, nervous, or lie to hide facts.
+                - If innocent: act frustrated, defensive, or indignant at being accused.
 
                 Difficulty: {GlobalVariables.GAME_DIFFICULTY}
-                - Easy: You might reveal clues even accidentally.
-                - Normal: You might slip under pressure.
+                - Easy: Might reveal clues even accidentally.
+                - Normal: Might slip under pressure.
                 - Hard: Avoid giving clues unless heavily pressed.
 
                 Conversation so far:
                 {history}
                 Player: {playerQuestion}
 
-                Return exactly this format:
+                ⚠️ CRITICAL RULES:
+                - You MUST return exactly one single line, in this format:
                 <BEGIN>
-                    response|expression|clue
+                your spoken response here|expression|clue
                 <END>
 
                 Where:
-                - response = your spoken reply to the player
-                - expression = one of: angry, concerned, happy, neutral, smile (exactly one of these words)
-                - clue = a short clue if revealed, or null
-
-                ⚠️ DO NOT use tags like <response> or <expression>.
-                DO NOT add explanations or extra lines.
-                Only return one single line like this:
-                My answer to the player here|concerned|null
+                - response = what you say (natural suspect reply, 1–3 sentences max)
+                - expression = ONLY one of [angry, concerned, happy, neutral, smile]
+                - clue = a short clue text, or 'null' if none
             ";
 
             history += $"\nPlayer: {playerQuestion}\n";
@@ -178,7 +254,7 @@ public class SuspectAIManager : MonoBehaviour
             {
                 try
                 {
-                    raw = Regex.Unescape(raw);
+                    raw = Regex.Unescape(raw ?? "");
 
                     var match = Regex.Match(raw, "<BEGIN>(.*?)<END>", RegexOptions.Singleline);
                     if (!match.Success) throw new Exception("Missing <BEGIN> or <END>");
@@ -209,15 +285,11 @@ public class SuspectAIManager : MonoBehaviour
 
                     var logManager = GetComponent<LogManager>();
                     if (logManager != null)
-                    {
                         logManager.AddLog(entry.playerQuestion, entry.response);
-                    }
 
                     var clueManager = GetComponent<EvidenceManager>();
                     if (clueManager != null)
-                    {
                         clueManager.AddEvidence(entry.clue);
-                    }
 
                     onComplete?.Invoke(entry);
 
@@ -245,7 +317,6 @@ public class SuspectAIManager : MonoBehaviour
             onComplete?.Invoke(null);
         }
     }
-
 
     // ========== 3. Gemini Communication ==========
     private IEnumerator SendPromptToGemini(string prompt, Action<string> onResponseText)
@@ -301,6 +372,6 @@ public class SuspectAIManager : MonoBehaviour
 
     private string JsonEscape(string raw)
     {
-        return "\"" + raw.Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\r", "") + "\"";
+        return "\"" + (raw ?? "").Replace("\\", "\\\\").Replace("\"", "\\\"").Replace("\n", "\\n").Replace("\r", "") + "\"";
     }
 }

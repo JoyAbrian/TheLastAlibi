@@ -9,6 +9,8 @@ public class GlobalVariables : MonoBehaviour
     public static int WRONG_ACCUSATIONS = 0;
     public static bool IS_SUSPECT_GUILTY = false;
 
+    public static CaseData CURRENT_CASE;
+
     public static Suspect CURRENT_SUSPECT;
     public static string CURRENT_SUSPECT_NAME = "";
     public static string CURRENT_SUSPECT_PERSONALITY = "";
@@ -27,6 +29,8 @@ public class GlobalVariables : MonoBehaviour
         TOTAL_CLUES_FOUND = 0;
         WRONG_ACCUSATIONS = 0;
         IS_SUSPECT_GUILTY = false;
+
+        CURRENT_CASE = null;
 
         CURRENT_SUSPECT = null;
         CURRENT_SUSPECT_NAME = "";

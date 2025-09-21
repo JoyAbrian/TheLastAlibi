@@ -742,12 +742,14 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: e0dfdb4145e4bcd40aca9339ffab6139, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  caseDatabase: {fileID: 11400000, guid: 4620ef141c9549c4b836f4b59efa5c8a, type: 2}
   apiKeyFile: {fileID: 4900000, guid: 3155420dac944bf4bb5d61e2898a56cf, type: 3}
   currentProfile:
     name: 
     personality: 
     backstory: []
     evidence: []
+    isGuilty: 0
 --- !u!4 &1490491711
 Transform:
   m_ObjectHideFlags: 0

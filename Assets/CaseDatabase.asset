@@ -1,0 +1,45 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 33c1ffb059c1c044f82cc5f085425a2c, type: 3}
+  m_Name: CaseDatabase
+  m_EditorClassIdentifier: 
+  cases:
+  - caseName: Accused of Poisoned Coffee
+    difficulty: 0
+  - caseName: Accused of Stolen Painting
+    difficulty: 0
+  - caseName: Accused of Broken Vase Mystery
+    difficulty: 0
+  - caseName: Accused of Library Whisper
+    difficulty: 0
+  - caseName: Accused of The Missing Wallet
+    difficulty: 0
+  - caseName: Accused of Alley Murder at Night
+    difficulty: 1
+  - caseName: Accused of Ring Theft in Apartment
+    difficulty: 1
+  - caseName: Accused of Apartment Break-In Case
+    difficulty: 1
+  - caseName: Accused of Neighbor Killed in Dispute
+    difficulty: 1
+  - caseName: Accused of Office Drawer Theft
+    difficulty: 1
+  - caseName: Accused of Warehouse Murder Case
+    difficulty: 2
+  - caseName: Accused of False Alibi Investigation
+    difficulty: 2
+  - caseName: Accused of Murder with Broken Watch
+    difficulty: 2
+  - caseName: Accused of Train Compartment Murder
+    difficulty: 2
+  - caseName: Accused of Gun Murder with Missing Bullet
+    difficulty: 2

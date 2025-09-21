@@ -8,4 +8,5 @@ public class SuspectProfile
     public string personality;
     public List<string> backstory;
     public List<string> evidence;
+    public bool isGuilty;
 }
