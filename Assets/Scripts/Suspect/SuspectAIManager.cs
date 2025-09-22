@@ -178,7 +178,9 @@ public class SuspectAIManager : MonoBehaviour
         List<string> CleanSplit(string input)
         {
             if (string.IsNullOrEmpty(input)) return new List<string>();
-            return input.Split(new[] { "\\n" }, StringSplitOptions.None)
+
+            // Pisah berdasarkan newline nyata
+            return input.Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries)
                         .Select(p => p.Trim())
                         .Where(p => !string.IsNullOrWhiteSpace(p))
                         .ToList();
@@ -366,8 +368,17 @@ public class SuspectAIManager : MonoBehaviour
         if (!match.Success) return null;
 
         string raw = match.Groups[1].Value;
-        raw = raw.Replace("\\n", "\\n").Replace("\\\"", "\"").Replace("\\\\", "\\").Trim();
-        return raw;
+
+        // Decode escape sequences dari JSON
+        raw = raw.Replace("\\\"", "\"")
+                 .Replace("\\\\", "\\")
+                 .Replace("\\n", "\n")
+                 .Replace("\\r", "");
+
+        // Gabungkan newline beruntun jadi satu
+        raw = Regex.Replace(raw, @"\n{2,}", "\n");
+
+        return raw.Trim();
     }
 
     private string JsonEscape(string raw)
