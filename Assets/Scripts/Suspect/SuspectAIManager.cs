@@ -49,10 +49,17 @@ public class SuspectAIManager : MonoBehaviour
             - name: {GlobalVariables.CURRENT_SUSPECT_NAME}
             - personality: {GlobalVariables.CURRENT_SUSPECT_PERSONALITY}
             - guilt_status: {(GlobalVariables.IS_SUSPECT_GUILTY ? "Guilty" : "Not Guilty")}
-            - a 2-4 very short paragraph backstory that explains their relationship to the crime (each paragraph separated by '\\n')
-            - If guilty: 1-3 clues that could incriminate them (separated by '\\n')
-            - If not guilty: 1-3 clues that could prove their innocence or point to the real culprit (separated by '\\n')
-
+            - a 2-4 paragraph backstory that subtly ties them to the crime, but without ever stating or strongly implying whether they are guilty or innocent. (separated by '\\n') 
+                * Make the tone ambiguous.
+                * Every paragraph must focus on their life, habits, or interactions around the time of the crime WITHOUT sounding like a confession.
+                * If guilty: the backstory should contain small inconsistencies or suspicious behaviors that COULD be clues, but should still appear explainable or accidental.
+                * If not guilty: the backstory should contain normal, harmless events that COULD be misinterpreted as suspicious by the player, but actually aren't.
+                * Avoid any wording that directly reveals guilt or innocence (e.g., never say ""they did it"", ""they didn't do it"", ""alibi"", ""couldn't have"", ""definitely"", etc.)
+                * Make it feel like the suspect is
+            - After the backstory:
+                * If guilty: generate 1-3 subtle clues that could incriminate them. These clues must NOT be direct evidence — only small hints the player must interpret. (separated by '\\n')
+                * If not guilty: generate 1-3 subtle clues that could prove innocence, but in a way that still appears potentially suspicious at first glance. (separated by '\\n')
+        
             Return plain text like:
             <BEGIN>
             $ActualName|$ActualPersonality|$guilt_status|backstory paragraph 1\\paragraph 2\\...|clue 1\\clue 2\nclue 3
