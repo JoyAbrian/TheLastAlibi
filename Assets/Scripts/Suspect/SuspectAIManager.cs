@@ -11,13 +11,19 @@ public class SuspectAIManager : MonoBehaviour
 {
     [Header("Gemini API Key JSON")]
     public TextAsset apiKeyFile;
+
     public static SuspectProfile GeneratedProfile;
+
     private string apiKey;
     private string model = "gemini-2.0-flash";
-    private string history = "";
+
     [HideInInspector] public SuspectProfile currentProfile;
     public SuspectInterrogationLog interrogationLog = new();
+
+    private string systemPrompt = "";
+    private string conversationHistory = "";
     private int dialogueCount = 0;
+    private int pressureLevel = 0;
 
     [Serializable] private class APIKeyWrapper { public string key; }
 
@@ -36,7 +42,9 @@ public class SuspectAIManager : MonoBehaviour
         }
     }
 
-    // ========== 1. Generate Profile ==========
+    // =================================================================================
+    // 1. GENERATE PROFILE
+    // =================================================================================
     public void GenerateSuspectProfile(Action<SuspectProfile> onGenerated)
     {
         StartCoroutine(GenerateSuspectRoutine(onGenerated));
@@ -49,37 +57,53 @@ public class SuspectAIManager : MonoBehaviour
             - name: {GlobalVariables.CURRENT_SUSPECT_NAME}
             - personality: {GlobalVariables.CURRENT_SUSPECT_PERSONALITY}
             - guilt_status: {(GlobalVariables.IS_SUSPECT_GUILTY ? "Guilty" : "Not Guilty")}
-            - a 2-4 paragraph backstory that subtly ties them to the crime, but without ever stating or strongly implying whether they are guilty or innocent. (separated by '\\n') 
-                * Make the tone ambiguous.
-                * Every paragraph must focus on their life, habits, or interactions around the time of the crime WITHOUT sounding like a confession.
-                * If guilty: the backstory should contain small inconsistencies or suspicious behaviors that COULD be clues, but should still appear explainable or accidental.
-                * If not guilty: the backstory should contain normal, harmless events that COULD be misinterpreted as suspicious by the player, but actually aren't.
-                * Avoid any wording that directly reveals guilt or innocence (e.g., never say ""they did it"", ""they didn't do it"", ""alibi"", ""couldn't have"", ""definitely"", etc.)
-                * Make it feel like the suspect is
+            - a 2-4 paragraph backstory that subtly ties them to the crime. (separated by '\\n') 
+                * If guilty: contain inconsistencies.
+                * If innocent: contain harmless events that look suspicious.
+                * Make it ambiguous. Never explicitly say 'I did it' or 'I am innocent' in the backstory text itself.
             - After the backstory:
-                * If guilty: generate 1-3 subtle clues that could incriminate them. These clues must NOT be direct evidence — only small hints the player must interpret. (separated by '\\n')
-                * If not guilty: generate 1-3 subtle clues that could prove innocence, but in a way that still appears potentially suspicious at first glance. (separated by '\\n')
+                * Generate 3-5 specific clues/evidence items related to them. (separated by '\\n')
         
             Return plain text like:
             <BEGIN>
-            $ActualName|$ActualPersonality|$guilt_status|backstory paragraph 1\\paragraph 2\\...|clue 1\\clue 2\nclue 3
+            $ActualName|$ActualPersonality|$guilt_status|backstory paragraph 1\\paragraph 2|clue 1\\clue 2
             <END>
 
-            Don't return markdown or explanation. Never add second name, just use the first name. Just raw delimited string.
+            Don't return markdown. Just raw delimited string.
         ";
 
-        int maxAttempts = 10;
+        bool success = false;
+        int maxAttempts = 5;
+
         for (int attempt = 0; attempt < maxAttempts; attempt++)
         {
-            bool success = false;
-            yield return SendPromptToGemini(prompt, rawText =>
+            yield return SendPromptToGemini(prompt, "", rawText =>
             {
                 try
                 {
                     var profile = ParseDelimitedSuspectProfile(rawText);
                     currentProfile = profile;
                     GeneratedProfile = profile;
-                    history = $"You are {(GlobalVariables.IS_SUSPECT_GUILTY ? "Guilty" : "Not Guilty")}. Remember this throughout the interrogation.\nBackstory:\n{string.Join("\n", profile.backstory)}\nClues:\n- {string.Join("\n- ", profile.evidence)}\n";
+
+                    systemPrompt = $@"
+                    You are {profile.name}, a {profile.personality} character.
+                    Status: {(GlobalVariables.IS_SUSPECT_GUILTY ? "GUILTY" : "INNOCENT")}.
+                    
+                    BACKSTORY:
+                    {string.Join("\n", profile.backstory)}
+
+                    KNOWN EVIDENCE (Only reveal if pressured):
+                    {string.Join("\n", profile.evidence)}
+
+                    INTERROGATION RULES:
+                    1. If GUILTY: Lie, deflect, and hide the truth. Only reveal clues if 'Pressure Level' is high.
+                    2. If INNOCENT: You are nervous. You tell the truth but might omit details out of fear.
+                    3. Stay in character. Keep answers short (1-2 sentences).
+                    ";
+
+                    conversationHistory = "";
+                    pressureLevel = 0;
+
                     onGenerated?.Invoke(profile);
                     success = true;
                 }
@@ -88,39 +112,27 @@ public class SuspectAIManager : MonoBehaviour
                     Debug.LogWarning($"⚠️ Attempt {attempt + 1} failed: {e.Message}");
                 }
             });
+
             if (success) yield break;
             yield return new WaitForSeconds(1f);
         }
-        Debug.LogError("❌ Failed to generate valid suspect after 10 attempts.");
+        Debug.LogError("❌ Failed to generate suspect.");
     }
 
     private SuspectProfile ParseDelimitedSuspectProfile(string raw)
     {
-        raw = System.Text.RegularExpressions.Regex.Unescape(raw);
+        raw = Regex.Unescape(raw);
         Match match = Regex.Match(raw, "<BEGIN>(.*?)<END>", RegexOptions.Singleline);
-        if (!match.Success)
-            throw new Exception("No valid content between <BEGIN> and <END>");
+        if (!match.Success) throw new Exception("No valid content between <BEGIN> and <END>");
 
         string delimited = match.Groups[1].Value.Trim();
         string[] parts = delimited.Split('|');
-        if (parts.Length < 5)
-        {
-            Debug.LogError("🛑 Delimited response was too short:\n" + delimited);
-            throw new Exception("Incomplete delimited profile. Expected 5 parts: name, personality, guilt_status, backstory, evidence");
-        }
+        if (parts.Length < 5) throw new Exception("Incomplete profile data.");
 
         List<string> CleanSplit(string input)
         {
-            string normalized = input
-                .Replace("\\\\n", "\n")
-                .Replace("\\n", "\n")
-                .Replace("\r", "");
-
-            return normalized
-                .Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(p => p.Trim().TrimEnd('\\'))
-                .Where(p => !string.IsNullOrWhiteSpace(p))
-                .ToList();
+            return input.Replace("\\n", "\n").Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(p => p.Trim()).Where(p => !string.IsNullOrWhiteSpace(p)).ToList();
         }
 
         return new SuspectProfile
@@ -132,7 +144,9 @@ public class SuspectAIManager : MonoBehaviour
         };
     }
 
-    // ========== 2. Interrogation ==========
+    // =================================================================================
+    // 2. INTERROGATION (WITH RAG & DIFFICULTY)
+    // =================================================================================
     public void SendPlayerQuestion(string question, Action<SuspectInterrogationEntry> onResponse)
     {
         StartCoroutine(SendInterrogationRoutine(question, onResponse));
@@ -140,170 +154,176 @@ public class SuspectAIManager : MonoBehaviour
 
     private IEnumerator SendInterrogationRoutine(string playerQuestion, Action<SuspectInterrogationEntry> onComplete)
     {
-        int maxAttempts = 10;
-        int attempt = 0;
-        bool success = false;
-
-        // Check if we need to summarize every 5 dialogues
         dialogueCount++;
-        if (dialogueCount % 5 == 0)
+        if (dialogueCount % 5 == 0) yield return SummarizeHistory();
+
+        string relevantClues = GetRelevantClues(playerQuestion);
+
+        UpdatePressure(playerQuestion, relevantClues);
+        int slipThreshold = GetSlipThreshold();
+
+        string dynamicPrompt = $@"
+            {systemPrompt}
+
+            CURRENT CONVERSATION:
+            {conversationHistory}
+
+            PLAYER: ""{playerQuestion}""
+
+            ANALYSIS:
+            - Context: Player is asking about: [{relevantClues}]
+            - Pressure Level: {pressureLevel} / {slipThreshold}
+            - Difficulty Mode: {GlobalVariables.GAME_DIFFICULTY}
+
+            INSTRUCTION:
+            - Determine your response based on Pressure vs Threshold.
+            - If Pressure > Threshold: You stumble, panic, or accidentally reveal a hint related to [{relevantClues}].
+            - If Pressure <= Threshold: Maintain your defense/story comfortably.
+
+            Return format exactly:
+            <BEGIN>
+            Response Text|Expression (angry,concerned,happy,neutral,smile)|Clue Revealed (or null)
+            <END>
+        ";
+
+        bool success = false;
+        int maxAttempts = 3;
+
+        for (int i = 0; i < maxAttempts; i++)
         {
-            yield return SummarizeHistory();
-        }
-
-        while (attempt < maxAttempts && !success)
-        {
-            attempt++;
-            string prompt = $@"
-                You are {GlobalVariables.CURRENT_SUSPECT_NAME} with a {GlobalVariables.CURRENT_SUSPECT_PERSONALITY} personality.
-                You are being interrogated for murder. You know you are {(GlobalVariables.IS_SUSPECT_GUILTY ? "Guilty" : "Not Guilty")}.
-
-                IMPORTANT BEHAVIORAL RULES:
-                - If you are 'guilty': You will try to hide the truth. You may lie, deflect, or act defensive. Only reveal clues when heavily pressured or caught in contradictions.
-                - If you are 'not_guilty': You may be scared, confused, or frustrated. You can be more open about your innocence but might still be nervous or withhold information if it looks bad for you.
-
-                Difficulty: {GlobalVariables.GAME_DIFFICULTY}
-                - Easy: You are more nervous and may accidentally reveal information.
-                - Normal: You balance between being cautious and occasionally slipping up under pressure.
-                - Hard: You are very careful and composed, rarely revealing anything unless cornered with strong evidence.
-
-                Stay consistent with your previous answers. If you lied before, remember that lie. If you told the truth, don't contradict yourself.
-
-                Conversation so far:
-                {history}
-
-                Player: {playerQuestion}
-
-                Return exactly this format:
-                $response|$expression|$clue
-
-                Where:
-                - response = your spoken reply to the player (stay in character)
-                - expression = one of: angry, concerned, happy, neutral, smile
-                - clue = a short clue if revealed, or null
-
-                DO NOT add explanations or extra lines.
-                Only return one single line like this:
-                <BEGIN>
-                My answer to the player here|concerned|null
-                <END>
-            ";
-
-            history += $"\nPlayer: {playerQuestion}\n";
-            bool isDone = false;
-
-            yield return SendPromptToGemini(prompt, raw =>
+            yield return SendPromptToGemini(dynamicPrompt, "", raw =>
             {
                 try
                 {
                     raw = Regex.Unescape(raw);
                     var match = Regex.Match(raw, "<BEGIN>(.*?)<END>", RegexOptions.Singleline);
-                    if (!match.Success) throw new Exception("Missing <BEGIN> or <END>");
+                    if (!match.Success) throw new Exception("Missing tags");
 
-                    string content = match.Groups[1].Value.Trim();
-                    string[] parts = content.Split('|');
-                    if (parts.Length < 3)
-                        throw new Exception("Invalid format. Expected 3 parts: response|expression|clue");
+                    string[] parts = match.Groups[1].Value.Trim().Split('|');
+                    if (parts.Length < 3) throw new Exception("Invalid format");
 
                     string response = parts[0].Trim();
                     string expression = parts[1].Trim().ToLower();
                     string clue = parts[2].Trim();
 
                     if (!new[] { "angry", "concerned", "happy", "neutral", "smile" }.Contains(expression))
-                        throw new Exception("Invalid expression: " + expression);
+                        expression = "neutral";
+
+                    string finalClue = (clue.ToLower() == "null" || clue.Length < 3) ? null : clue;
+
+                    if (finalClue != null) pressureLevel = Mathf.Max(0, pressureLevel - 2);
 
                     var entry = new SuspectInterrogationEntry
                     {
                         playerQuestion = playerQuestion,
                         response = response,
                         expression = expression,
-                        clue = clue == "null" ? null : clue
+                        clue = finalClue
                     };
 
-                    history += $"Suspect: {entry.response}\n";
+                    conversationHistory += $"Player: {playerQuestion}\nSuspect: {response}\n";
                     interrogationLog.AddEntry(entry);
 
-                    var logManager = GetComponent<LogManager>();
-                    if (logManager != null)
-                    {
-                        logManager.AddLog(entry.playerQuestion, entry.response);
-                    }
-
-                    var clueManager = GetComponent<EvidenceManager>();
-                    if (clueManager != null)
-                    {
-                        clueManager.AddEvidence(entry.clue);
-                    }
+                    if (GetComponent<LogManager>()) GetComponent<LogManager>().AddLog(playerQuestion, response);
+                    if (GetComponent<EvidenceManager>() && finalClue != null) GetComponent<EvidenceManager>().AddEvidence(finalClue);
 
                     onComplete?.Invoke(entry);
                     success = true;
                 }
                 catch (Exception e)
                 {
-                    Debug.LogWarning($"⚠️ Attempt {attempt} failed to parse interrogation reply: {e.Message}");
-                }
-                finally
-                {
-                    isDone = true;
+                    Debug.LogWarning($"Interrogation Parse Error: {e.Message}");
                 }
             });
 
-            while (!isDone) yield return null;
-            if (!success)
-                yield return new WaitForSeconds(1f);
+            if (success) break;
+            yield return new WaitForSeconds(0.5f);
         }
 
-        if (!success)
+        if (!success) onComplete?.Invoke(null);
+    }
+
+    private string GetRelevantClues(string question)
+    {
+        if (currentProfile == null || currentProfile.evidence == null) return "None";
+
+        var words = question.ToLower().Split(new[] { ' ', '?', '.', ',' }, StringSplitOptions.RemoveEmptyEntries);
+        var hits = new List<string>();
+
+        foreach (var ev in currentProfile.evidence)
         {
-            Debug.LogError("❌ All attempts to get a valid suspect response failed.");
-            onComplete?.Invoke(null);
+            foreach (var word in words)
+            {
+                if (word.Length > 3 && ev.ToLower().Contains(word))
+                {
+                    hits.Add(ev);
+                    break;
+                }
+            }
+        }
+
+        if (hits.Count == 0) return "General Topic";
+        return string.Join(", ", hits.Distinct());
+    }
+
+    private void UpdatePressure(string question, string relevantClues)
+    {
+        if (relevantClues != "General Topic" && relevantClues != "None")
+        {
+            pressureLevel += 1;
+        }
+
+        if (question.ToLower().Contains("murder") || question.ToLower().Contains("kill") || question.ToLower().Contains("lie"))
+        {
+            pressureLevel += 1;
         }
     }
 
-    // ========== Summary System (Token Optimization) ==========
+    private int GetSlipThreshold()
+    {
+        switch (GlobalVariables.GAME_DIFFICULTY)
+        {
+            case "Easy": return 2;
+            case "Normal": return 4;
+            case "Hard": return 7;
+            default: return 4;
+        }
+    }
+
+    // =================================================================================
+    // 3. SUMMARIZATION & UTILS
+    // =================================================================================
     private IEnumerator SummarizeHistory()
     {
-        string summaryPrompt = $@"
-            Summarize the last 5 exchanges of this interrogation into a brief 2-3 sentence conclusion about what was discussed and any key revelations or lies. Keep the suspect's guilt status and core backstory intact.
-
-            Current History:
-            {history}
-
-            Return only the summary text without tags or formatting.
+        string prompt = $@"
+            Summarize the following conversation in 2 sentences. 
+            Focus on what lies were told or what topics were discussed.
+            
+            Conversation:
+            {conversationHistory}
         ";
 
-        bool isDone = false;
-        yield return SendPromptToGemini(summaryPrompt, raw =>
+        yield return SendPromptToGemini(prompt, "", raw =>
         {
-            try
+            if (!string.IsNullOrEmpty(raw))
             {
-                string summary = raw.Trim();
-                string coreInfo = $"You are {(GlobalVariables.IS_SUSPECT_GUILTY ? "Guilty" : "Not Guilty")}. Remember this throughout the interrogation.\nBackstory:\n{string.Join("\n", currentProfile.backstory)}\nClues:\n- {string.Join("\n- ", currentProfile.evidence)}\n";
-                history = coreInfo + "\n[Previous conversation summary: " + summary + "]\n";
-                Debug.Log("📝 History summarized to save tokens.");
-            }
-            catch (Exception e)
-            {
-                Debug.LogWarning($"⚠️ Failed to summarize history: {e.Message}");
-            }
-            finally
-            {
-                isDone = true;
+                conversationHistory = $"[Previous Summary: {raw.Trim()}]\n";
+                Debug.Log("📝 History Summarized.");
             }
         });
-        while (!isDone) yield return null;
     }
 
-    // ========== 3. Gemini Communication ==========
-    private IEnumerator SendPromptToGemini(string prompt, Action<string> onResponseText)
+    private IEnumerator SendPromptToGemini(string prompt, string historyContext, Action<string> onResponseText)
     {
+        string fullContent = historyContext + prompt;
+
         string requestBody = $@"{{
-  ""contents"": [
-    {{
-      ""parts"": [{{ ""text"": {JsonEscape(history + "\n" + prompt)} }}]
-    }}
-  ]
-}}";
+          ""contents"": [
+            {{
+              ""parts"": [{{ ""text"": {JsonEscape(fullContent)} }}]
+            }}
+          ]
+        }}";
 
         byte[] bodyRaw = Encoding.UTF8.GetBytes(requestBody);
         UnityWebRequest req = new UnityWebRequest(
@@ -323,27 +343,24 @@ public class SuspectAIManager : MonoBehaviour
             yield break;
         }
 
-        string responseText = req.downloadHandler.text;
-        string extracted = ExtractDelimitedResponse(responseText);
-
+        string extracted = ExtractDelimitedResponse(req.downloadHandler.text);
         if (string.IsNullOrEmpty(extracted))
         {
-            Debug.LogError("❌ Failed to extract delimited text from Gemini response.");
-            yield break;
+            extracted = req.downloadHandler.text;
         }
 
-        Debug.Log("📦 Raw Delimited:\n" + extracted);
         onResponseText?.Invoke(extracted);
     }
 
     private string ExtractDelimitedResponse(string responseText)
     {
         var match = Regex.Match(responseText, "\"text\"\\s*:\\s*\"(.*?)\"", RegexOptions.Singleline);
-        if (!match.Success) return null;
-
-        string raw = match.Groups[1].Value;
-        raw = raw.Replace("\\n", "\n").Replace("\\\"", "\"").Replace("\\\\", "\\").Trim();
-        return raw;
+        if (match.Success)
+        {
+            string raw = match.Groups[1].Value;
+            return raw.Replace("\\n", "\n").Replace("\\\"", "\"").Replace("\\\\", "\\").Trim();
+        }
+        return responseText;
     }
 
     private string JsonEscape(string raw)
