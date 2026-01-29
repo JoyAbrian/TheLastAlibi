@@ -54,7 +54,7 @@ public class SuspectAIManager : MonoBehaviour
     {
         string prompt = $@"
             Generate a fictional murder suspect with:
-            - name: {GlobalVariables.CURRENT_SUSPECT_NAME}
+            - name: {GlobalVariables.CURRENT_SUSPECT_NAME}, use only this name, never add surname
             - personality: {GlobalVariables.CURRENT_SUSPECT_PERSONALITY}
             - guilt_status: {(GlobalVariables.IS_SUSPECT_GUILTY ? "Guilty" : "Not Guilty")}
             - a 2-4 paragraph backstory that subtly ties them to the crime. (separated by '\\n') 
@@ -85,6 +85,14 @@ public class SuspectAIManager : MonoBehaviour
                     currentProfile = profile;
                     GeneratedProfile = profile;
 
+                    Debug.Log("<color=cyan>=== PROFILE GENERATED ===</color>");
+                    Debug.Log($"<b>Name:</b> {profile.name}");
+                    Debug.Log($"<b>Personality:</b> {profile.personality}");
+                    Debug.Log($"<b>Backstory:</b>\n{string.Join("\n", profile.backstory)}");
+                    Debug.Log($"<b>Evidence:</b>\n{string.Join("\n", profile.evidence)}");
+                    Debug.Log("<color=cyan>=========================</color>");
+                    // ----------------------------------------
+
                     systemPrompt = $@"
                     You are {profile.name}, a {profile.personality} character.
                     Status: {(GlobalVariables.IS_SUSPECT_GUILTY ? "GUILTY" : "INNOCENT")}.
@@ -96,7 +104,9 @@ public class SuspectAIManager : MonoBehaviour
                     {string.Join("\n", profile.evidence)}
 
                     INTERROGATION RULES:
-                    1. If GUILTY: Lie, deflect, and hide the truth. Only reveal clues if 'Pressure Level' is high.
+                    1. If GUILTY: You are trying to protect yourself. Do not reveal incriminating details from the BACKSTORY. 
+                                  Instead of lying completely randomly, twist the truth. (e.g., if you met late at night, say it was a accidental meeting in the morning).  
+                                  Downplay your relationship with the victim to appear less suspicious.
                     2. If INNOCENT: You are nervous. You tell the truth but might omit details out of fear.
                     3. Stay in character. Keep answers short (1-2 sentences).
                     ";
@@ -144,9 +154,6 @@ public class SuspectAIManager : MonoBehaviour
         };
     }
 
-    // =================================================================================
-    // 2. INTERROGATION (WITH RAG & DIFFICULTY)
-    // =================================================================================
     public void SendPlayerQuestion(string question, Action<SuspectInterrogationEntry> onResponse)
     {
         StartCoroutine(SendInterrogationRoutine(question, onResponse));
@@ -213,6 +220,16 @@ public class SuspectAIManager : MonoBehaviour
 
                     if (finalClue != null) pressureLevel = Mathf.Max(0, pressureLevel - 2);
 
+                    Debug.Log($"<color=yellow>[PLAYER]:</color> {playerQuestion}");
+                    Debug.Log($"<color=white>[SUSPECT]:</color> {response}");
+                    Debug.Log($"<color=grey>[EXPRESSION]:</color> {expression}");
+                    Debug.Log($"<color=grey>[PRESSURE]:</color> {pressureLevel} / {slipThreshold}");
+
+                    if (finalClue != null)
+                    {
+                        Debug.Log($"<color=red><b>[!!! CLUE REVEALED !!!]:</b> {finalClue}</color>");
+                    }
+
                     var entry = new SuspectInterrogationEntry
                     {
                         playerQuestion = playerQuestion,
@@ -225,7 +242,16 @@ public class SuspectAIManager : MonoBehaviour
                     interrogationLog.AddEntry(entry);
 
                     if (GetComponent<LogManager>()) GetComponent<LogManager>().AddLog(playerQuestion, response);
-                    if (GetComponent<EvidenceManager>() && finalClue != null) GetComponent<EvidenceManager>().AddEvidence(finalClue);
+
+                    if (finalClue != null)
+                    {
+                        var evidenceMgr = GetComponent<EvidenceManager>();
+                        if (evidenceMgr != null)
+                        {
+                            evidenceMgr.AddEvidence(finalClue);
+                            evidenceMgr.ShowClueFoundIcon();
+                        }
+                    }
 
                     onComplete?.Invoke(entry);
                     success = true;
@@ -340,10 +366,18 @@ public class SuspectAIManager : MonoBehaviour
         if (req.result != UnityWebRequest.Result.Success)
         {
             Debug.LogError("Gemini API Error: " + req.error);
+            Debug.LogError("Response Error Body: " + req.downloadHandler.text); // Debug body error
             yield break;
         }
 
+        Debug.Log($"[GEMINI RAW JSON]: {req.downloadHandler.text}");
+        
         string extracted = ExtractDelimitedResponse(req.downloadHandler.text);
+        if (string.IsNullOrEmpty(extracted))
+            Debug.Log($"[GEMINI EXTRACTED]: <Empty>");
+        else
+            Debug.Log($"[GEMINI EXTRACTED]: {extracted}");
+
         if (string.IsNullOrEmpty(extracted))
         {
             extracted = req.downloadHandler.text;

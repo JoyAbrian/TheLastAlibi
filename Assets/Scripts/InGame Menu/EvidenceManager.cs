@@ -6,11 +6,12 @@ public class EvidenceManager : MonoBehaviour
 {
     public GameObject evidencePanel;
     public GameObject evidenceTextPrefab;
-
+    public GameObject clueFoundIcon;
     private HashSet<string> knownEvidence = new();
 
     private void Start()
     {
+        clueFoundIcon.SetActive(false);
         if (SuspectAIManager.GeneratedProfile != null)
         {
             DisplayEvidence(SuspectAIManager.GeneratedProfile.evidence);
@@ -42,5 +43,10 @@ public class EvidenceManager : MonoBehaviour
             Canvas.ForceUpdateCanvases();
             clueText.ForceMeshUpdate();
         }
+    }
+
+    public void ShowClueFoundIcon()
+    {
+        clueFoundIcon.SetActive(true);
     }
 }
