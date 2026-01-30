@@ -11,7 +11,7 @@ public class EvidenceManager : MonoBehaviour
 
     private void Start()
     {
-        clueFoundIcon.SetActive(false);
+        HideClueFoundIcon();
         if (SuspectAIManager.GeneratedProfile != null)
         {
             DisplayEvidence(SuspectAIManager.GeneratedProfile.evidence);
@@ -40,6 +40,8 @@ public class EvidenceManager : MonoBehaviour
         if (clueText != null)
         {
             clueText.text = "• " + clue;
+            GlobalVariables.TOTAL_CLUES_FOUND++;
+
             Canvas.ForceUpdateCanvases();
             clueText.ForceMeshUpdate();
         }
@@ -48,5 +50,10 @@ public class EvidenceManager : MonoBehaviour
     public void ShowClueFoundIcon()
     {
         clueFoundIcon.SetActive(true);
+    }
+
+    public void HideClueFoundIcon()
+    {
+        clueFoundIcon.SetActive(false);
     }
 }

@@ -28,7 +28,13 @@ public class MenuOpen : MonoBehaviour
         else
         {
             CloseAllMenus(false);
+
             menu.SetActive(true);
+            if (menu == evidenceMenu)
+            {
+                Debug.Log("Hiding Clue Found Icon");
+                GameObject.Find("Suspect Manager").GetComponent<EvidenceManager>().HideClueFoundIcon();
+            }
             background.SetActive(true);
 
             SoundManager.PlaySound(SoundType.BookOpen, volume: GlobalVariables.SOUND_EFFECTS_VOLUME);

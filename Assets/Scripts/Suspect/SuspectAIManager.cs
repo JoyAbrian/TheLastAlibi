@@ -15,7 +15,8 @@ public class SuspectAIManager : MonoBehaviour
     public static SuspectProfile GeneratedProfile;
 
     private string apiKey;
-    private string model = "gemini-2.0-flash";
+    private string generationModel = "gemini-2.5-pro";
+    private string chatModel = "gemini-2.5-flash";
 
     [HideInInspector] public SuspectProfile currentProfile;
     public SuspectInterrogationLog interrogationLog = new();
@@ -53,23 +54,32 @@ public class SuspectAIManager : MonoBehaviour
     private IEnumerator GenerateSuspectRoutine(Action<SuspectProfile> onGenerated)
     {
         string prompt = $@"
-            Generate a fictional murder suspect with:
-            - name: {GlobalVariables.CURRENT_SUSPECT_NAME}, use only this name, never add surname
-            - personality: {GlobalVariables.CURRENT_SUSPECT_PERSONALITY}
-            - guilt_status: {(GlobalVariables.IS_SUSPECT_GUILTY ? "Guilty" : "Not Guilty")}
-            - a 2-4 paragraph backstory that subtly ties them to the crime. (separated by '\\n') 
-                * If guilty: contain inconsistencies.
-                * If innocent: contain harmless events that look suspicious.
-                * Make it ambiguous. Never explicitly say 'I did it' or 'I am innocent' in the backstory text itself.
-            - After the backstory:
-                * Generate 3-5 specific clues/evidence items related to them. (separated by '\\n')
-        
-            Return plain text like:
+            Task: Create a complex murder suspect profile (Suspect POV).
+            
+            Context:
+            - Name: {GlobalVariables.CURRENT_SUSPECT_NAME} (Use exactly this name)
+            - Personality: {GlobalVariables.CURRENT_SUSPECT_PERSONALITY}
+            - Guilt: {(GlobalVariables.IS_SUSPECT_GUILTY ? "Guilty" : "Not Guilty")}
+            - Language: {GlobalVariables.LANGUAGE_SETTINGS} (ONLY FOR BACKSTORY AND CLUES)
+            
+            Directives for BACKSTORY (2-3 concise paragraph):
+            1. POV: First Person ('I' / 'Me').
+            2. CRITICAL: The very first sentence MUST define your relationship with the victim (e.g., 'She was my business partner', 'He was a stranger I met at the bar', 'She was like a daughter to me').
+            3. CONTENT: 
+               - Describe your history with the victim clearly.
+               - Explain where you were during the crime (Alibi).
+               - If GUILTY: You did it, but your backstory is the lie/half-truth you tell the police. You admit the relationship, but lie about the killing.
+               - If INNOCENT: You are telling the truth, but you have a secret or embarrassing reason to be nervous.
+            
+            Directives for EVIDENCE (3-5 items):
+            - Physical items (receipts, tools, messages) that connect you to the scene or victim.
+
+            Output Format (Strict Plain Text):
             <BEGIN>
-            $ActualName|$ActualPersonality|$guilt_status|backstory paragraph 1\\paragraph 2|clue 1\\clue 2
+            {GlobalVariables.CURRENT_SUSPECT_NAME}|$ActualPersonality|$guilt_status|backstory paragraph 1\\paragraph 2|clue 1\\clue 2
             <END>
 
-            Don't return markdown. Just raw delimited string.
+            Do not use Markdown. Do not translate <BEGIN> tags.
         ";
 
         bool success = false;
@@ -77,7 +87,7 @@ public class SuspectAIManager : MonoBehaviour
 
         for (int attempt = 0; attempt < maxAttempts; attempt++)
         {
-            yield return SendPromptToGemini(prompt, "", rawText =>
+            yield return SendPromptToGemini(prompt, generationModel ,"", rawText =>
             {
                 try
                 {
@@ -85,31 +95,14 @@ public class SuspectAIManager : MonoBehaviour
                     currentProfile = profile;
                     GeneratedProfile = profile;
 
+                    systemPrompt = BuildSystemPrompt(profile);
+
                     Debug.Log("<color=cyan>=== PROFILE GENERATED ===</color>");
                     Debug.Log($"<b>Name:</b> {profile.name}");
                     Debug.Log($"<b>Personality:</b> {profile.personality}");
                     Debug.Log($"<b>Backstory:</b>\n{string.Join("\n", profile.backstory)}");
                     Debug.Log($"<b>Evidence:</b>\n{string.Join("\n", profile.evidence)}");
                     Debug.Log("<color=cyan>=========================</color>");
-                    // ----------------------------------------
-
-                    systemPrompt = $@"
-                    You are {profile.name}, a {profile.personality} character.
-                    Status: {(GlobalVariables.IS_SUSPECT_GUILTY ? "GUILTY" : "INNOCENT")}.
-                    
-                    BACKSTORY:
-                    {string.Join("\n", profile.backstory)}
-
-                    KNOWN EVIDENCE (Only reveal if pressured):
-                    {string.Join("\n", profile.evidence)}
-
-                    INTERROGATION RULES:
-                    1. If GUILTY: You are trying to protect yourself. Do not reveal incriminating details from the BACKSTORY. 
-                                  Instead of lying completely randomly, twist the truth. (e.g., if you met late at night, say it was a accidental meeting in the morning).  
-                                  Downplay your relationship with the victim to appear less suspicious.
-                    2. If INNOCENT: You are nervous. You tell the truth but might omit details out of fear.
-                    3. Stay in character. Keep answers short (1-2 sentences).
-                    ";
 
                     conversationHistory = "";
                     pressureLevel = 0;
@@ -127,6 +120,37 @@ public class SuspectAIManager : MonoBehaviour
             yield return new WaitForSeconds(1f);
         }
         Debug.LogError("❌ Failed to generate suspect.");
+    }
+
+    private string BuildSystemPrompt(SuspectProfile profile)
+    {
+        return $@"
+            IDENTITY: You are {profile.name}, a {profile.personality} character.
+            STATUS: {(GlobalVariables.IS_SUSPECT_GUILTY ? "GUILTY" : "INNOCENT")}.
+            LANGUAGE: {GlobalVariables.LANGUAGE_SETTINGS}.
+
+            [ABSOLUTE TRUTH - MEMORY IMPLANT]
+            The text below is your ABSOLUTE MEMORY. You cannot know anything outside of this scope.
+            
+            === YOUR MEMORY (BACKSTORY) ===
+            {string.Join("\n", profile.backstory)}
+
+            === KNOWN EVIDENCE (REVEAL ONLY IF PRESSURED) ===
+            {string.Join("\n", profile.evidence)}
+
+            [INTERROGATION RULES]
+            1. ACKNOWLEDGE THE VICTIM: The person described in your Backstory IS the victim. 
+                - NEVER say 'I don't know who you mean' or 'No relationship' if the backstory says otherwise.
+                - If the backstory says 'like a brother/daughter', ADMIT this bond emotionally.
+        
+            2. DEFENSE STRATEGY:
+                - If GUILTY: ADMIT the relationship, but DENY the murder. Stick to the alibi in your backstory. Do not feign amnesia.
+                - If INNOCENT: You are nervous but truthful. You want to help but are afraid of being blamed.
+
+            3. TONE:
+                - Answering 'I don't know' to basic questions about yourself/victim makes you look fake. Avoid it.
+                - Keep answers natural, short (1-3 sentences).
+        ";
     }
 
     private SuspectProfile ParseDelimitedSuspectProfile(string raw)
@@ -164,6 +188,22 @@ public class SuspectAIManager : MonoBehaviour
         dialogueCount++;
         if (dialogueCount % 5 == 0) yield return SummarizeHistory();
 
+        if (string.IsNullOrEmpty(systemPrompt))
+        {
+            if (GeneratedProfile.name != null)
+            {
+                Debug.Log("⚠️ System Prompt was empty. Rebuilding from Static Profile.");
+                currentProfile = GeneratedProfile;
+                systemPrompt = BuildSystemPrompt(currentProfile);
+            }
+            else
+            {
+                Debug.LogError("❌ FATAL: No Profile Data found to generate System Prompt!");
+                onComplete?.Invoke(null);
+                yield break;
+            }
+        }
+
         string relevantClues = GetRelevantClues(playerQuestion);
 
         UpdatePressure(playerQuestion, relevantClues);
@@ -171,6 +211,8 @@ public class SuspectAIManager : MonoBehaviour
 
         string dynamicPrompt = $@"
             {systemPrompt}
+
+            REMINDER: Reply strictly in {GlobalVariables.LANGUAGE_SETTINGS}, ONLY FOR RESPONSE AND ALL CLUES.
 
             CURRENT CONVERSATION:
             {conversationHistory}
@@ -198,7 +240,7 @@ public class SuspectAIManager : MonoBehaviour
 
         for (int i = 0; i < maxAttempts; i++)
         {
-            yield return SendPromptToGemini(dynamicPrompt, "", raw =>
+            yield return SendPromptToGemini(dynamicPrompt, chatModel, "", raw =>
             {
                 try
                 {
@@ -329,7 +371,7 @@ public class SuspectAIManager : MonoBehaviour
             {conversationHistory}
         ";
 
-        yield return SendPromptToGemini(prompt, "", raw =>
+        yield return SendPromptToGemini(prompt, generationModel, "", raw =>
         {
             if (!string.IsNullOrEmpty(raw))
             {
@@ -339,21 +381,27 @@ public class SuspectAIManager : MonoBehaviour
         });
     }
 
-    private IEnumerator SendPromptToGemini(string prompt, string historyContext, Action<string> onResponseText)
+    private IEnumerator SendPromptToGemini(string prompt, string modelToUse, string historyContext, Action<string> onResponseText)
     {
         string fullContent = historyContext + prompt;
+
+        Debug.Log($"<color=orange><b>[SENDING PROMPT TO {modelToUse}]:</b></color>\n{fullContent}");
 
         string requestBody = $@"{{
           ""contents"": [
             {{
               ""parts"": [{{ ""text"": {JsonEscape(fullContent)} }}]
             }}
-          ]
+          ],
+          ""generationConfig"": {{
+            ""maxOutputTokens"": 8192,
+            ""temperature"": 0.7
+          }}
         }}";
 
         byte[] bodyRaw = Encoding.UTF8.GetBytes(requestBody);
         UnityWebRequest req = new UnityWebRequest(
-            $"https://generativelanguage.googleapis.com/v1beta/models/{model}:generateContent?key={apiKey}",
+            $"https://generativelanguage.googleapis.com/v1beta/models/{modelToUse}:generateContent?key={apiKey}",
             "POST"
         );
 

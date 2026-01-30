@@ -21,6 +21,8 @@ public class GlobalVariables : MonoBehaviour
     public static float MUSIC_VOLUME = 0.8f;
     public static float SOUND_EFFECTS_VOLUME = 0.5f;
 
+    public static string LANGUAGE_SETTINGS = "ENGLISH";
+
     public static void ResetGameVariables()
     {
         GAME_DIFFICULTY = "Normal";
@@ -38,5 +40,7 @@ public class GlobalVariables : MonoBehaviour
         MASTER_VOLUME = 1f;
         MUSIC_VOLUME = 0.8f;
         SOUND_EFFECTS_VOLUME = 0.5f;
+        
+        LANGUAGE_SETTINGS = "ENGLISH";
     }
 }
