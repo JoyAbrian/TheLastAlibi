@@ -83,7 +83,7 @@ public class SuspectAIManager : MonoBehaviour
         ";
 
         bool success = false;
-        int maxAttempts = 5;
+        int maxAttempts = 10;
 
         for (int attempt = 0; attempt < maxAttempts; attempt++)
         {
@@ -161,18 +161,26 @@ public class SuspectAIManager : MonoBehaviour
 
         string delimited = match.Groups[1].Value.Trim();
         string[] parts = delimited.Split('|');
+
         if (parts.Length < 5) throw new Exception("Incomplete profile data.");
 
         List<string> CleanSplit(string input)
         {
-            return input.Replace("\\n", "\n").Split(new[] { '\n' }, StringSplitOptions.RemoveEmptyEntries)
-                .Select(p => p.Trim()).Where(p => !string.IsNullOrWhiteSpace(p)).ToList();
+            string processed = input.Replace("\\\\", "\n");
+            processed = processed.Replace("\\", "\n");
+            processed = processed.Replace("\\n", "\n");
+
+            return processed.Split(new[] { '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries)
+                .Select(p => p.Trim())
+                .Where(p => !string.IsNullOrWhiteSpace(p))
+                .ToList();
         }
 
         return new SuspectProfile
         {
             name = parts[0].Trim(),
             personality = parts[1].Trim(),
+
             backstory = CleanSplit(parts[3]),
             evidence = CleanSplit(parts[4])
         };
@@ -186,6 +194,8 @@ public class SuspectAIManager : MonoBehaviour
     private IEnumerator SendInterrogationRoutine(string playerQuestion, Action<SuspectInterrogationEntry> onComplete)
     {
         dialogueCount++;
+        GlobalVariables.TOTAL_CONVERSATIONS++;
+
         if (dialogueCount % 5 == 0) yield return SummarizeHistory();
 
         if (string.IsNullOrEmpty(systemPrompt))
@@ -236,7 +246,7 @@ public class SuspectAIManager : MonoBehaviour
         ";
 
         bool success = false;
-        int maxAttempts = 3;
+        int maxAttempts = 10;
 
         for (int i = 0; i < maxAttempts; i++)
         {
@@ -270,6 +280,20 @@ public class SuspectAIManager : MonoBehaviour
                     if (finalClue != null)
                     {
                         Debug.Log($"<color=red><b>[!!! CLUE REVEALED !!!]:</b> {finalClue}</color>");
+                        var evidenceMgr = FindObjectOfType<EvidenceManager>();
+
+                        if (evidenceMgr != null)
+                        {
+                            bool isNew = evidenceMgr.AddEvidence(finalClue);
+                            if (isNew)
+                            {
+                                evidenceMgr.ShowClueFoundIcon();
+                            }
+                        }
+                        else
+                        {
+                            Debug.LogError("⚠️ SuspectAIManager: Tidak bisa menemukan EvidenceManager di Scene!");
+                        }
                     }
 
                     var entry = new SuspectInterrogationEntry
@@ -356,6 +380,97 @@ public class SuspectAIManager : MonoBehaviour
             case "Hard": return 7;
             default: return 4;
         }
+    }
+
+    // =================================================================================
+    // 2.5. PLAYER SUGGESTION SYSTEM (AUTO HINTS)
+    // =================================================================================
+    
+    public void GenerateSuggestedQuestions(Action<List<string>> onSuggestionsReady)
+    {
+        if (GlobalVariables.GAME_DIFFICULTY == "Hard")
+        {
+            Debug.Log("🔒 [HINTS]: Suggestions disabled in HARD mode.");
+            onSuggestionsReady?.Invoke(new List<string>());
+            return;
+        }
+
+        StartCoroutine(GenerateSuggestionsRoutine(onSuggestionsReady));
+    }
+
+    private IEnumerator GenerateSuggestionsRoutine(Action<List<string>> onReady)
+    {
+        if (currentProfile == null || currentProfile.evidence == null)
+        {
+            Debug.LogWarning("⚠️ Cannot generate hints: No profile loaded.");
+            yield break;
+        }
+
+        string evidenceList = string.Join(", ", currentProfile.evidence);
+
+        string prompt = $@"
+            ROLE: Expert Detective Assistant.
+            TARGET: {currentProfile.name}
+            GOAL: The player needs to catch the suspect lying or reveal a clue.
+            
+            HIDDEN TRUTHS (CLUES) THE SUSPECT IS HIDING:
+            [{evidenceList}]
+
+            CURRENT CONTEXT:
+            {conversationHistory}
+
+            TASK:
+            Generate 3 sharp, specific questions for the PLAYER to ask right now.
+            
+            CRITERIA:
+            1. High Probability (80%): The questions must trap the suspect into talking about the 'HIDDEN TRUTHS' listed above.
+            2. LENGTH: STRICTLY 8 TO 10 WORDS MAX per question. (Must fit in small UI button).
+            3. Style: Direct, aggressive, short, and punchy.
+            4. Language: {GlobalVariables.LANGUAGE_SETTINGS}.
+
+            OUTPUT FORMAT (Strictly 3 lines separated by pipe '|'):
+            Question 1|Question 2|Question 3
+        ";
+
+        Debug.Log($"<color=magenta>🧠 [GENERATING HINTS]...</color>");
+
+        yield return SendPromptToGemini(prompt, chatModel, "", raw =>
+        {
+            List<string> suggestions = new List<string>();
+
+            try
+            {
+                string cleanRaw = Regex.Unescape(raw).Trim();
+
+                if (cleanRaw.StartsWith("\"") && cleanRaw.EndsWith("\""))
+                    cleanRaw = cleanRaw.Substring(1, cleanRaw.Length - 2);
+
+                string[] parts = cleanRaw.Split('|');
+
+                foreach (string part in parts)
+                {
+                    string q = part.Trim();
+                    if (!string.IsNullOrEmpty(q))
+                    {
+                        suggestions.Add(q);
+                    }
+                }
+
+                Debug.Log("<color=magenta>=== 💡 SUGGESTED QUESTIONS (80% Success Rate) ===</color>");
+                for (int i = 0; i < suggestions.Count; i++)
+                {
+                    Debug.Log($"<b>Option {i + 1}:</b> {suggestions[i]}");
+                }
+                Debug.Log("<color=magenta>===============================================</color>");
+
+                onReady?.Invoke(suggestions);
+            }
+            catch (Exception e)
+            {
+                Debug.LogError($"❌ Failed to parse suggestions: {e.Message}");
+                onReady?.Invoke(null);
+            }
+        });
     }
 
     // =================================================================================

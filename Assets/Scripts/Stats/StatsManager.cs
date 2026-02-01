@@ -1,7 +1,5 @@
-using System;
 using TMPro;
 using UnityEngine;
-using UnityEngine.SocialPlatforms.Impl;
 
 public class StatsManager : MonoBehaviour
 {
@@ -14,9 +12,9 @@ public class StatsManager : MonoBehaviour
 
     private void UpdateStats()
     {
-        cluesText.text = CreateTOCLine("Clues Found", StatisticVariables.totalCluesFound.ToString());
+        cluesText.text = CreateTOCLine("Clues Found", GlobalVariables.TOTAL_CLUES_FOUND.ToString());
         minutesPlayedText.text = CreateTOCLine("Minutes Played", ConvertTime(StatisticVariables.totalTimeSpend.ToString()));
-        conversationText.text = CreateTOCLine("Conversations", StatisticVariables.totalConversation.ToString());
+        conversationText.text = CreateTOCLine("Conversations", GlobalVariables.TOTAL_CONVERSATIONS.ToString());
         accuracyText.text = CreateTOCLine("Accuracy", $"{CalculateAccuracy()}%");
     }
 
@@ -43,7 +41,7 @@ public class StatsManager : MonoBehaviour
         int score = 100;
         if (StatisticVariables.finalAccusation != GlobalVariables.IS_SUSPECT_GUILTY)
         {
-            score -= 80; // Penalty for false accusation
+            score -= 80;
         }
 
         score -= StatisticVariables.totalTimeSpend / 60 * 2;

@@ -3,11 +3,12 @@ using UnityEngine.UI;
 
 public class MenuOpen : MonoBehaviour
 {
-    public Button evidenceButton, logButton, profileButton, settingButton;
-    public GameObject background, evidenceMenu, logMenu, profileMenu, settingMenu;
+    public Button backstoryButton, evidenceButton, logButton, profileButton, settingButton;
+    public GameObject background, backstoryMenu, evidenceMenu, logMenu, profileMenu, settingMenu;
 
     private void Awake()
     {
+        backstoryButton.onClick.AddListener(() => ToggleMenu(backstoryMenu));
         evidenceButton.onClick.AddListener(() => ToggleMenu(evidenceMenu));
         logButton.onClick.AddListener(() => ToggleMenu(logMenu));
         profileButton.onClick.AddListener(() => ToggleMenu(profileMenu));
@@ -43,6 +44,7 @@ public class MenuOpen : MonoBehaviour
 
     public void CloseAllMenus(bool playSound)
     {
+        backstoryMenu.SetActive(false);
         evidenceMenu.SetActive(false);
         logMenu.SetActive(false);
         profileMenu.SetActive(false);

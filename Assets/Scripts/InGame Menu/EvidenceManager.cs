@@ -1,4 +1,4 @@
-using UnityEngine;
+﻿using UnityEngine;
 using TMPro;
 using System.Collections.Generic;
 
@@ -7,6 +7,7 @@ public class EvidenceManager : MonoBehaviour
     public GameObject evidencePanel;
     public GameObject evidenceTextPrefab;
     public GameObject clueFoundIcon;
+
     private HashSet<string> knownEvidence = new();
 
     private void Start()
@@ -28,23 +29,38 @@ public class EvidenceManager : MonoBehaviour
         }
     }
 
-    public void AddEvidence(string clue)
+    public bool AddEvidence(string clue)
     {
-        if (string.IsNullOrWhiteSpace(clue) || knownEvidence.Contains(clue))
-            return;
+        if (string.IsNullOrWhiteSpace(clue)) return false;
+        if (knownEvidence.Contains(clue)) return false;
 
         knownEvidence.Add(clue);
 
-        GameObject clueGO = Instantiate(evidenceTextPrefab, evidencePanel.transform);
-        TMP_Text clueText = clueGO.GetComponent<TMP_Text>();
-        if (clueText != null)
+        GlobalVariables.TOTAL_CLUES_FOUND++;
+
+        if (!GlobalVariables.FOUND_EVIDENCE.Contains(clue))
         {
-            clueText.text = "� " + clue;
-            GlobalVariables.TOTAL_CLUES_FOUND++;
+            GlobalVariables.FOUND_EVIDENCE.Add(clue);
+        }
+
+        if (evidenceTextPrefab != null && evidencePanel != null)
+        {
+            GameObject clueGO = Instantiate(evidenceTextPrefab, evidencePanel.transform);
+            TMP_Text clueText = clueGO.GetComponent<TMP_Text>();
+
+            if (clueText != null)
+            {
+                clueText.text = $"• {clue}";
+            }
 
             Canvas.ForceUpdateCanvases();
-            clueText.ForceMeshUpdate();
         }
+        else
+        {
+            Debug.LogError("❌ EvidenceManager: Prefab atau Panel belum di-assign di Inspector!");
+        }
+
+        return true;
     }
 
     public void ShowClueFoundIcon()

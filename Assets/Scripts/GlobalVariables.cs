@@ -6,6 +6,8 @@ public class GlobalVariables : MonoBehaviour
     public static string GAME_DIFFICULTY = "Normal";
 
     public static int TOTAL_CLUES_FOUND = 0;
+    public static int TOTAL_CONVERSATIONS = 0;
+
     public static int WRONG_ACCUSATIONS = 0;
     public static bool IS_SUSPECT_GUILTY = false;
 
@@ -26,7 +28,10 @@ public class GlobalVariables : MonoBehaviour
     public static void ResetGameVariables()
     {
         GAME_DIFFICULTY = "Normal";
+
         TOTAL_CLUES_FOUND = 0;
+        TOTAL_CONVERSATIONS = 0;
+
         WRONG_ACCUSATIONS = 0;
         IS_SUSPECT_GUILTY = false;
 
