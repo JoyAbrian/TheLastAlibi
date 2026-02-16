@@ -24,5 +24,8 @@ public class PlayGame : MonoBehaviour
     {
         GlobalVariables.GAME_DIFFICULTY = difficulty;
         fadeManager.FadeToScene("LoadingScene");
+
+        GlobalVariables.ResetGameVariables();
+        StatisticVariables.ResetStatistics();
     }
 }

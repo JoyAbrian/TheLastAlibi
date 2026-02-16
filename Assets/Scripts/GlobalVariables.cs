@@ -27,8 +27,6 @@ public class GlobalVariables : MonoBehaviour
 
     public static void ResetGameVariables()
     {
-        GAME_DIFFICULTY = "Normal";
-
         TOTAL_CLUES_FOUND = 0;
         TOTAL_CONVERSATIONS = 0;
 
@@ -41,11 +39,5 @@ public class GlobalVariables : MonoBehaviour
 
         INTERROGATION_LOG.Clear();
         FOUND_EVIDENCE.Clear();
-
-        MASTER_VOLUME = 1f;
-        MUSIC_VOLUME = 0.8f;
-        SOUND_EFFECTS_VOLUME = 0.5f;
-        
-        LANGUAGE_SETTINGS = "ENGLISH";
     }
 }
